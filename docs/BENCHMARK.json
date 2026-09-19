@@ -1,0 +1,10 @@
+{
+  "notes": 128000,
+  "parseMs": 17.363041000000003,
+  "indexMs": 91.63804199999998,
+  "queries": 1000,
+  "queryMs": 1.1138329999999996,
+  "visibleNotes": 264000,
+  "saveReopenMs": 38.783417000000014,
+  "serializedBytes": 328032
+}

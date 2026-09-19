@@ -1,0 +1,2452 @@
+[
+  {
+    "form": "OpPlayer.Designer.vb",
+    "line": 55,
+    "control": "OK_Button",
+    "text": "OK",
+    "status": "unverified"
+  },
+  {
+    "form": "OpPlayer.Designer.vb",
+    "line": 66,
+    "control": "Cancel_Button",
+    "text": "Cancel",
+    "status": "unverified"
+  },
+  {
+    "form": "OpPlayer.Designer.vb",
+    "line": 74,
+    "control": "Label2",
+    "text": "Play from beginning",
+    "status": "unverified"
+  },
+  {
+    "form": "OpPlayer.Designer.vb",
+    "line": 83,
+    "control": "Label3",
+    "text": "Play from current measure",
+    "status": "unverified"
+  },
+  {
+    "form": "OpPlayer.Designer.vb",
+    "line": 92,
+    "control": "Label4",
+    "text": "Stop",
+    "status": "unverified"
+  },
+  {
+    "form": "OpPlayer.Designer.vb",
+    "line": 123,
+    "control": "Label6",
+    "text": "References (case-sensitive):\" & Global.Microsoft.VisualBasic.ChrW(13) & Global.Microsoft.VisualBasic.ChrW(10) & \"<apppath> = Directory of the application\" & Global.Microsoft.VisualBasic.ChrW(13) & Global.Microsoft.VisualBasic.ChrW(10) & \"<measure>",
+    "status": "unverified"
+  },
+  {
+    "form": "OpPlayer.Designer.vb",
+    "line": 139,
+    "control": "Label1",
+    "text": "Path",
+    "status": "unverified"
+  },
+  {
+    "form": "OpPlayer.Designer.vb",
+    "line": 149,
+    "control": "BBrowse",
+    "text": "...",
+    "status": "unverified"
+  },
+  {
+    "form": "OpPlayer.Designer.vb",
+    "line": 160,
+    "control": "BDefault",
+    "text": "Restore default",
+    "status": "unverified"
+  },
+  {
+    "form": "OpPlayer.Designer.vb",
+    "line": 170,
+    "control": "BRemove",
+    "text": "Remove",
+    "status": "unverified"
+  },
+  {
+    "form": "OpPlayer.Designer.vb",
+    "line": 180,
+    "control": "BAdd",
+    "text": "Add",
+    "status": "unverified"
+  },
+  {
+    "form": "OpPlayer.Designer.vb",
+    "line": 210,
+    "control": "Label5",
+    "text": "Current Player:",
+    "status": "unverified"
+  },
+  {
+    "form": "OpPlayer.Designer.vb",
+    "line": 219,
+    "control": "Label7",
+    "text": "Arguments",
+    "status": "unverified"
+  },
+  {
+    "form": "OpGeneral.Designer.vb",
+    "line": 85,
+    "control": "OK_Button",
+    "text": "OK",
+    "status": "unverified"
+  },
+  {
+    "form": "OpGeneral.Designer.vb",
+    "line": 95,
+    "control": "Cancel_Button",
+    "text": "Cancel",
+    "status": "unverified"
+  },
+  {
+    "form": "OpGeneral.Designer.vb",
+    "line": 123,
+    "control": "Label1",
+    "text": "Mouse Wheel",
+    "status": "unverified"
+  },
+  {
+    "form": "OpGeneral.Designer.vb",
+    "line": 132,
+    "control": "Label2",
+    "text": "Text Encoding",
+    "status": "unverified"
+  },
+  {
+    "form": "OpGeneral.Designer.vb",
+    "line": 141,
+    "control": "Label4",
+    "text": "Associate Filetype",
+    "status": "unverified"
+  },
+  {
+    "form": "OpGeneral.Designer.vb",
+    "line": 150,
+    "control": "TBAssociate",
+    "text": "*.bms",
+    "status": "unverified"
+  },
+  {
+    "form": "OpGeneral.Designer.vb",
+    "line": 162,
+    "control": "cBeep",
+    "text": "Beep while saved",
+    "status": "unverified"
+  },
+  {
+    "form": "OpGeneral.Designer.vb",
+    "line": 181,
+    "control": "cBpm1296",
+    "text": "Extend number of multi-byte BPMs to 1296",
+    "status": "unverified"
+  },
+  {
+    "form": "OpGeneral.Designer.vb",
+    "line": 191,
+    "control": "cStop1296",
+    "text": "Extend number of STOPs to 1296",
+    "status": "unverified"
+  },
+  {
+    "form": "OpGeneral.Designer.vb",
+    "line": 201,
+    "control": "cMEnterFocus",
+    "text": "Automatically set focus to editing panel on mouse enter",
+    "status": "unverified"
+  },
+  {
+    "form": "OpGeneral.Designer.vb",
+    "line": 211,
+    "control": "cMClickFocus",
+    "text": "Disable first click if the editing panel is not focused",
+    "status": "unverified"
+  },
+  {
+    "form": "OpGeneral.Designer.vb",
+    "line": 220,
+    "control": "TBAssociatePMS",
+    "text": "*.pms",
+    "status": "unverified"
+  },
+  {
+    "form": "OpGeneral.Designer.vb",
+    "line": 229,
+    "control": "TBAssociateIBMSC",
+    "text": "*.ibmsc",
+    "status": "unverified"
+  },
+  {
+    "form": "OpGeneral.Designer.vb",
+    "line": 238,
+    "control": "Label5",
+    "text": "PageUp / PageDown",
+    "status": "unverified"
+  },
+  {
+    "form": "OpGeneral.Designer.vb",
+    "line": 268,
+    "control": "Label7",
+    "text": "minutes",
+    "status": "unverified"
+  },
+  {
+    "form": "OpGeneral.Designer.vb",
+    "line": 280,
+    "control": "cAutoSave",
+    "text": "AutoSave",
+    "status": "unverified"
+  },
+  {
+    "form": "OpGeneral.Designer.vb",
+    "line": 292,
+    "control": "cMStopPreview",
+    "text": "Stop preview if clicked on the editing panel",
+    "status": "unverified"
+  },
+  {
+    "form": "OpGeneral.Designer.vb",
+    "line": 311,
+    "control": "Label6",
+    "text": "Max Grid Partition in BMS",
+    "status": "unverified"
+  },
+  {
+    "form": "OpGeneral.Designer.vb",
+    "line": 320,
+    "control": "TBAssociateBME",
+    "text": "*.bme",
+    "status": "unverified"
+  },
+  {
+    "form": "OpGeneral.Designer.vb",
+    "line": 329,
+    "control": "TBAssociateBML",
+    "text": "*.bml",
+    "status": "unverified"
+  },
+  {
+    "form": "OpGeneral.Designer.vb",
+    "line": 338,
+    "control": "Label3",
+    "text": "Mouse Middle Button",
+    "status": "unverified"
+  },
+  {
+    "form": "OpGeneral.Designer.vb",
+    "line": 363,
+    "control": "rMiddleAuto",
+    "text": "Click and Auto Scroll",
+    "status": "unverified"
+  },
+  {
+    "form": "OpGeneral.Designer.vb",
+    "line": 375,
+    "control": "rMiddleDrag",
+    "text": "Click and Drag",
+    "status": "unverified"
+  },
+  {
+    "form": "SCompareMethod.Designer.vb",
+    "line": 37,
+    "control": "bQuickSort",
+    "text": "Quick Sort",
+    "status": "unverified"
+  },
+  {
+    "form": "SCompareMethod.Designer.vb",
+    "line": 66,
+    "control": "bBubbleSort",
+    "text": "Bubble Sort",
+    "status": "unverified"
+  },
+  {
+    "form": "SCompareMethod.Designer.vb",
+    "line": 75,
+    "control": "bInsertionSort",
+    "text": "Insertion Sort",
+    "status": "unverified"
+  },
+  {
+    "form": "SCompareMethod.Designer.vb",
+    "line": 84,
+    "control": "bImport",
+    "text": "Import K",
+    "status": "unverified"
+  },
+  {
+    "form": "dgImportSM.Designer.vb",
+    "line": 56,
+    "control": "OK_Button",
+    "text": "OK",
+    "status": "unverified"
+  },
+  {
+    "form": "dgImportSM.Designer.vb",
+    "line": 66,
+    "control": "Cancel_Button",
+    "text": "Cancel",
+    "status": "unverified"
+  },
+  {
+    "form": "dgImportSM.Designer.vb",
+    "line": 74,
+    "control": "Label5",
+    "text": "Please note that bg musics and STOP values will not be imported.",
+    "status": "unverified"
+  },
+  {
+    "form": "dgImportSM.Designer.vb",
+    "line": 92,
+    "control": "Label7",
+    "text": "Difficulty:",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 125,
+    "control": "OK_Button",
+    "text": "OK",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 135,
+    "control": "Cancel_Button",
+    "text": "Cancel",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 157,
+    "control": "Label8",
+    "text": "Bg",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 166,
+    "control": "Label1",
+    "text": "Width",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 175,
+    "control": "Label7",
+    "text": "Long\" & Global.Microsoft.VisualBasic.ChrW(13) & Global.Microsoft.VisualBasic.ChrW(10) & \"Note\" & Global.Microsoft.VisualBasic.ChrW(13) & Global.Microsoft.VisualBasic.ChrW(10) & \"Label",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 184,
+    "control": "Label5",
+    "text": "Long\" & Global.Microsoft.VisualBasic.ChrW(13) & Global.Microsoft.VisualBasic.ChrW(10) & \"Note",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 193,
+    "control": "Label6",
+    "text": "Label",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 202,
+    "control": "Label2",
+    "text": "Caption",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 211,
+    "control": "Label4",
+    "text": "Note",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 220,
+    "control": "Label33",
+    "text": "Hidden Note Opacity",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 240,
+    "control": "Label23",
+    "text": "Note Border on Adjusting Length",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 251,
+    "control": "cAdjustLengthBorder",
+    "text": "FF000000",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 262,
+    "control": "cSelectedBorder",
+    "text": "FF000000",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 273,
+    "control": "cMouseOver",
+    "text": "FF000000",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 311,
+    "control": "fMeasureLabel",
+    "text": "Verdana",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 322,
+    "control": "fNoteLabel",
+    "text": "Verdana",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 341,
+    "control": "fTSBPM",
+    "text": "Verdana",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 352,
+    "control": "cTSBPM",
+    "text": "FF000000",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 363,
+    "control": "cTSSelectionFill",
+    "text": "FF000000",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 374,
+    "control": "cTSCursor",
+    "text": "FF000000",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 385,
+    "control": "cSelectionBox",
+    "text": "FF000000",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 396,
+    "control": "cWaveForm",
+    "text": "FF000000",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 407,
+    "control": "cMeasureBarLine",
+    "text": "FF000000",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 418,
+    "control": "cVerticalLine",
+    "text": "FF000000",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 429,
+    "control": "cSub",
+    "text": "FF000000",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 440,
+    "control": "cGrid",
+    "text": "FF000000",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 451,
+    "control": "cBG",
+    "text": "FF000000",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 462,
+    "control": "fColumnTitle",
+    "text": "Tahoma",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 473,
+    "control": "cColumnTitle",
+    "text": "FF000000",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 482,
+    "control": "Label40",
+    "text": "Measure BarLine",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 491,
+    "control": "Label39",
+    "text": "LongNote Label Horizontal Shift",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 500,
+    "control": "Label38",
+    "text": "Note Label Horizontal Shift",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 509,
+    "control": "Label37",
+    "text": "Column Caption",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 518,
+    "control": "Label88",
+    "text": "Time Selection BPM",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 527,
+    "control": "Label35",
+    "text": "Note Border on Selection",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 536,
+    "control": "Label34",
+    "text": "Note Border on MouseOver",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 545,
+    "control": "Label86",
+    "text": "Time Selection Fill",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 554,
+    "control": "Label98",
+    "text": "Time Selection Cursor",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 563,
+    "control": "Label31",
+    "text": "Selection Box Border",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 572,
+    "control": "Label30",
+    "text": "Background",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 581,
+    "control": "Label29",
+    "text": "Vertical Line",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 590,
+    "control": "Label28",
+    "text": "Measure Label",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 599,
+    "control": "Label27",
+    "text": "Sub",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 608,
+    "control": "Label26",
+    "text": "Grid",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 617,
+    "control": "Label25",
+    "text": "Note Label Vertical Shift",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 626,
+    "control": "Label24",
+    "text": "Note Label",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 635,
+    "control": "Label22",
+    "text": "BGM Waveform",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 644,
+    "control": "Label21",
+    "text": "Note Height",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 653,
+    "control": "Label9",
+    "text": "Column Caption Font",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 664,
+    "control": "cTSSplitter",
+    "text": "FF000000",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 673,
+    "control": "Label97",
+    "text": "Time Selection Splitter",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 682,
+    "control": "Label96",
+    "text": "Time Selection Cursor Sensitivity",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 703,
+    "control": "cTSMouseOver",
+    "text": "FF000000",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 712,
+    "control": "Label91",
+    "text": "Time Selection MouseOver Border",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 721,
+    "control": "Label82",
+    "text": "Time Selection BPM Font",
+    "status": "unverified"
+  },
+  {
+    "form": "OpVisual.Designer.vb",
+    "line": 730,
+    "control": "Label14",
+    "text": "Middle Button Release Sensitivity",
+    "status": "unverified"
+  },
+  {
+    "form": "AboutBox1.Designer.vb",
+    "line": 38,
+    "control": "ClickToCopy",
+    "text": "Click to copy",
+    "status": "unverified"
+  },
+  {
+    "form": "AboutBox1.Designer.vb",
+    "line": 50,
+    "control": "Label1",
+    "text": "Click to copy",
+    "status": "unverified"
+  },
+  {
+    "form": "fLoadFileProgress.Designer.vb",
+    "line": 38,
+    "control": "Cancel_Button",
+    "text": "Cancel",
+    "status": "unverified"
+  },
+  {
+    "form": "diagFind.Designer.vb",
+    "line": 101,
+    "control": "Label1",
+    "text": "Note Range",
+    "status": "unverified"
+  },
+  {
+    "form": "diagFind.Designer.vb",
+    "line": 110,
+    "control": "Label2",
+    "text": "Measure Range",
+    "status": "unverified"
+  },
+  {
+    "form": "diagFind.Designer.vb",
+    "line": 146,
+    "control": "lr2",
+    "text": "ZZ",
+    "status": "unverified"
+  },
+  {
+    "form": "diagFind.Designer.vb",
+    "line": 181,
+    "control": "cb1",
+    "text": "BPM",
+    "status": "unverified"
+  },
+  {
+    "form": "diagFind.Designer.vb",
+    "line": 196,
+    "control": "cb2",
+    "text": "STOP",
+    "status": "unverified"
+  },
+  {
+    "form": "diagFind.Designer.vb",
+    "line": 211,
+    "control": "cba1",
+    "text": "A1",
+    "status": "unverified"
+  },
+  {
+    "form": "diagFind.Designer.vb",
+    "line": 226,
+    "control": "cba2",
+    "text": "A2",
+    "status": "unverified"
+  },
+  {
+    "form": "diagFind.Designer.vb",
+    "line": 241,
+    "control": "cba3",
+    "text": "A3",
+    "status": "unverified"
+  },
+  {
+    "form": "diagFind.Designer.vb",
+    "line": 256,
+    "control": "cba4",
+    "text": "A4",
+    "status": "unverified"
+  },
+  {
+    "form": "diagFind.Designer.vb",
+    "line": 271,
+    "control": "cba5",
+    "text": "A5",
+    "status": "unverified"
+  },
+  {
+    "form": "diagFind.Designer.vb",
+    "line": 286,
+    "control": "cba6",
+    "text": "A6",
+    "status": "unverified"
+  },
+  {
+    "form": "diagFind.Designer.vb",
+    "line": 301,
+    "control": "cba7",
+    "text": "A7",
+    "status": "unverified"
+  },
+  {
+    "form": "diagFind.Designer.vb",
+    "line": 316,
+    "control": "cba8",
+    "text": "A8",
+    "status": "unverified"
+  },
+  {
+    "form": "diagFind.Designer.vb",
+    "line": 331,
+    "control": "cbd1",
+    "text": "D1",
+    "status": "unverified"
+  },
+  {
+    "form": "diagFind.Designer.vb",
+    "line": 346,
+    "control": "cbd2",
+    "text": "D2",
+    "status": "unverified"
+  },
+  {
+    "form": "diagFind.Designer.vb",
+    "line": 361,
+    "control": "cbd3",
+    "text": "D3",
+    "status": "unverified"
+  },
+  {
+    "form": "diagFind.Designer.vb",
+    "line": 376,
+    "control": "cbd4",
+    "text": "D4",
+    "status": "unverified"
+  },
+  {
+    "form": "diagFind.Designer.vb",
+    "line": 391,
+    "control": "cbd5",
+    "text": "D5",
+    "status": "unverified"
+  },
+  {
+    "form": "diagFind.Designer.vb",
+    "line": 406,
+    "control": "cbd6",
+    "text": "D6",
+    "status": "unverified"
+  },
+  {
+    "form": "diagFind.Designer.vb",
+    "line": 421,
+    "control": "cbd7",
+    "text": "D7",
+    "status": "unverified"
+  },
+  {
+    "form": "diagFind.Designer.vb",
+    "line": 436,
+    "control": "cbd8",
+    "text": "D8",
+    "status": "unverified"
+  },
+  {
+    "form": "diagFind.Designer.vb",
+    "line": 451,
+    "control": "cb3",
+    "text": "BGA",
+    "status": "unverified"
+  },
+  {
+    "form": "diagFind.Designer.vb",
+    "line": 466,
+    "control": "cb4",
+    "text": "LAYER",
+    "status": "unverified"
+  },
+  {
+    "form": "diagFind.Designer.vb",
+    "line": 481,
+    "control": "cb5",
+    "text": "POOR",
+    "status": "unverified"
+  },
+  {
+    "form": "diagFind.Designer.vb",
+    "line": 496,
+    "control": "cbb1",
+    "text": "B1",
+    "status": "unverified"
+  },
+  {
+    "form": "diagFind.Designer.vb",
+    "line": 537,
+    "control": "BSAll",
+    "text": "Select All",
+    "status": "unverified"
+  },
+  {
+    "form": "diagFind.Designer.vb",
+    "line": 547,
+    "control": "BSInv",
+    "text": "Select Inverse",
+    "status": "unverified"
+  },
+  {
+    "form": "diagFind.Designer.vb",
+    "line": 557,
+    "control": "BSNone",
+    "text": "Unselect All",
+    "status": "unverified"
+  },
+  {
+    "form": "diagFind.Designer.vb",
+    "line": 566,
+    "control": "Label3",
+    "text": "Label Range",
+    "status": "unverified"
+  },
+  {
+    "form": "diagFind.Designer.vb",
+    "line": 575,
+    "control": "Label4",
+    "text": "Value Range",
+    "status": "unverified"
+  },
+  {
+    "form": "diagFind.Designer.vb",
+    "line": 584,
+    "control": "TBSelect",
+    "text": "Select",
+    "status": "unverified"
+  },
+  {
+    "form": "diagFind.Designer.vb",
+    "line": 594,
+    "control": "TBClose",
+    "text": "Close",
+    "status": "unverified"
+  },
+  {
+    "form": "diagFind.Designer.vb",
+    "line": 603,
+    "control": "TBDelete",
+    "text": "Delete",
+    "status": "unverified"
+  },
+  {
+    "form": "diagFind.Designer.vb",
+    "line": 612,
+    "control": "TBrl",
+    "text": "Replace with Label:",
+    "status": "unverified"
+  },
+  {
+    "form": "diagFind.Designer.vb",
+    "line": 621,
+    "control": "TBrv",
+    "text": "Replace with Value:",
+    "status": "unverified"
+  },
+  {
+    "form": "diagFind.Designer.vb",
+    "line": 630,
+    "control": "Label5",
+    "text": "to",
+    "status": "unverified"
+  },
+  {
+    "form": "diagFind.Designer.vb",
+    "line": 639,
+    "control": "Label6",
+    "text": "to",
+    "status": "unverified"
+  },
+  {
+    "form": "diagFind.Designer.vb",
+    "line": 648,
+    "control": "Label7",
+    "text": "to",
+    "status": "unverified"
+  },
+  {
+    "form": "diagFind.Designer.vb",
+    "line": 678,
+    "control": "Label8",
+    "text": "Column",
+    "status": "unverified"
+  },
+  {
+    "form": "diagFind.Designer.vb",
+    "line": 687,
+    "control": "Label9",
+    "text": "Operation",
+    "status": "unverified"
+  },
+  {
+    "form": "diagFind.Designer.vb",
+    "line": 727,
+    "control": "cbx1",
+    "text": "Selected",
+    "status": "unverified"
+  },
+  {
+    "form": "diagFind.Designer.vb",
+    "line": 742,
+    "control": "cbx2",
+    "text": "Unselected",
+    "status": "unverified"
+  },
+  {
+    "form": "diagFind.Designer.vb",
+    "line": 757,
+    "control": "cbx3",
+    "text": "Short",
+    "status": "unverified"
+  },
+  {
+    "form": "diagFind.Designer.vb",
+    "line": 767,
+    "control": "TBUnselect",
+    "text": "Unselect",
+    "status": "unverified"
+  },
+  {
+    "form": "diagFind.Designer.vb",
+    "line": 781,
+    "control": "cbx4",
+    "text": "Long",
+    "status": "unverified"
+  },
+  {
+    "form": "diagFind.Designer.vb",
+    "line": 796,
+    "control": "cbx5",
+    "text": "Hidden",
+    "status": "unverified"
+  },
+  {
+    "form": "diagFind.Designer.vb",
+    "line": 811,
+    "control": "cbx6",
+    "text": "Visible",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 453,
+    "control": "TBLangDef",
+    "text": "(Default)",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 460,
+    "control": "TBLangRefresh",
+    "text": "Refresh",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 473,
+    "control": "mnLanguage",
+    "text": "&Language",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 483,
+    "control": "TBLanguage",
+    "text": "Language",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 496,
+    "control": "TBThemeDef",
+    "text": "(Default)",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 503,
+    "control": "TBThemeSave",
+    "text": "Save Theme",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 510,
+    "control": "TBThemeRefresh",
+    "text": "Refresh",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 516,
+    "control": "TBThemeLoadComptability",
+    "text": "Load Theme File from iBMSC 2.x",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 529,
+    "control": "mnTheme",
+    "text": "&Theme",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 539,
+    "control": "TBTheme",
+    "text": "Theme",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 629,
+    "control": "POExpansionSwitch",
+    "text": "Expansion Code",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 746,
+    "control": "BBeatApplyV",
+    "text": "Apply",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 770,
+    "control": "BBeatApply",
+    "text": "Apply",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 782,
+    "control": "Label7",
+    "text": "/",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 841,
+    "control": "CBeatScale",
+    "text": "Scale to measure length",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 853,
+    "control": "CBeatCut",
+    "text": "Keep measure position and cut overflow",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 864,
+    "control": "CBeatMeasure",
+    "text": "Keep measure position",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 877,
+    "control": "CBeatPreserve",
+    "text": "Keep absolute position",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 892,
+    "control": "POBeatSwitch",
+    "text": "Beat",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 1062,
+    "control": "CWAVMultiSelect",
+    "text": "Allow Multiple Selection",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 1075,
+    "control": "CWAVChangeLabel",
+    "text": "Synchronize Note Labels",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 1092,
+    "control": "POWAVSwitch",
+    "text": "#WAV",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 1449,
+    "control": "TWFileName",
+    "text": "(None)",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 1519,
+    "control": "POWaveFormSwitch",
+    "text": "WaveForm",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 1645,
+    "control": "Label5",
+    "text": "Vertical Scroll Lock",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 1674,
+    "control": "Label1",
+    "text": "Number of B Columns",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 1838,
+    "control": "CGDisableVertical",
+    "text": "Disable vertical moves (D)",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 1851,
+    "control": "CGSnap",
+    "text": "Snap to grid (G)",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 1934,
+    "control": "POGridSwitch",
+    "text": "Grid",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2036,
+    "control": "Label13",
+    "text": "(%)",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2057,
+    "control": "Label25",
+    "text": "(%)",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2081,
+    "control": "Label23",
+    "text": "ExRank",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2092,
+    "control": "Label21",
+    "text": "Difficulty",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2113,
+    "control": "Label24",
+    "text": "LnObj",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2124,
+    "control": "Label15",
+    "text": "SubTitle",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2144,
+    "control": "Label20",
+    "text": "Total",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2156,
+    "control": "BHStageFile",
+    "text": "...",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2168,
+    "control": "BHBanner",
+    "text": "...",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2179,
+    "control": "Label19",
+    "text": "Comment",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2191,
+    "control": "BHBackBMP",
+    "text": "...",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2202,
+    "control": "Label17",
+    "text": "SubArtist",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2213,
+    "control": "Label16",
+    "text": "Stage File",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2224,
+    "control": "Label12",
+    "text": "Banner",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2244,
+    "control": "Label11",
+    "text": "Back BMP",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2346,
+    "control": "Label3",
+    "text": "Title",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2378,
+    "control": "Label10",
+    "text": "Rank",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2401,
+    "control": "Label4",
+    "text": "Artist",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2435,
+    "control": "Label2",
+    "text": "Genre",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2464,
+    "control": "Label9",
+    "text": "BPM",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2475,
+    "control": "Label8",
+    "text": "Player",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2486,
+    "control": "Label6",
+    "text": "Play Level",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2503,
+    "control": "POHeaderSwitch",
+    "text": "Header",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2523,
+    "control": "MInsert",
+    "text": "Insert Measure",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2530,
+    "control": "MRemove",
+    "text": "Remove Measure",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2555,
+    "control": "mnFile",
+    "text": "&File",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2563,
+    "control": "mnNew",
+    "text": "&New",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2571,
+    "control": "mnOpen",
+    "text": "&Open",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2578,
+    "control": "mnImportSM",
+    "text": "Import from .S&M file",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2585,
+    "control": "mnImportIBMSC",
+    "text": "Import from .&IBMSC file",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2598,
+    "control": "mnSave",
+    "text": "&Save",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2605,
+    "control": "mnSaveAs",
+    "text": "Save &As...",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2612,
+    "control": "mnExport",
+    "text": "&Export .IBMSC file",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2625,
+    "control": "mnOpenR0",
+    "text": "Recent #0",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2633,
+    "control": "mnOpenR1",
+    "text": "Recent #1",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2641,
+    "control": "mnOpenR2",
+    "text": "Recent #2",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2649,
+    "control": "mnOpenR3",
+    "text": "Recent #3",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2657,
+    "control": "mnOpenR4",
+    "text": "Recent #4",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2668,
+    "control": "mnQuit",
+    "text": "&Quit",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2675,
+    "control": "mnEdit",
+    "text": "&Edit",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2684,
+    "control": "mnUndo",
+    "text": "&Undo",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2693,
+    "control": "mnRedo",
+    "text": "&Redo",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2706,
+    "control": "mnCut",
+    "text": "Cu&t",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2714,
+    "control": "mnCopy",
+    "text": "&Copy",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2722,
+    "control": "mnPaste",
+    "text": "&Paste",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2730,
+    "control": "mnDelete",
+    "text": "De&lete",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2737,
+    "control": "mnSelectAll",
+    "text": "Select &All",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2750,
+    "control": "mnFind",
+    "text": "&Find / Delete / Replace",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2758,
+    "control": "mnStatistics",
+    "text": "St&atistics",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2772,
+    "control": "mnTimeSelect",
+    "text": "T&ime Selection Tool",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2783,
+    "control": "mnSelect",
+    "text": "&Select Tool",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2792,
+    "control": "mnWrite",
+    "text": "&Write Tool",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2804,
+    "control": "mnMyO2",
+    "text": "MyO2 ToolBox (Chinese Only)",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2811,
+    "control": "mnOptions",
+    "text": "&Options",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2822,
+    "control": "mnNTInput",
+    "text": "L&N Input Style - NT/BMSE",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2832,
+    "control": "mnErrorCheck",
+    "text": "&Error Check",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2842,
+    "control": "mnPreviewOnClick",
+    "text": "Preview on &Click",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2850,
+    "control": "mnShowFileName",
+    "text": "Show &File Name on Notes",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2862,
+    "control": "mnGOptions",
+    "text": "&General Options",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2869,
+    "control": "mnVOptions",
+    "text": "&Visual Options",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2876,
+    "control": "mnPOptions",
+    "text": "&Player Options",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2883,
+    "control": "mnConversion",
+    "text": "&Conversions",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2898,
+    "control": "POBLong",
+    "text": "→ &Long Note",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2905,
+    "control": "POBShort",
+    "text": "→ &Short Note",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2913,
+    "control": "POBLongShort",
+    "text": "Long Note ↔ Short Note",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2925,
+    "control": "POBHidden",
+    "text": "→ &Hidden Note",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2932,
+    "control": "POBVisible",
+    "text": "→ &Visible Note",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2939,
+    "control": "POBHiddenVisible",
+    "text": "Hidden Note ↔ Visible Note",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2951,
+    "control": "POBModify",
+    "text": "&Modify Labels",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2958,
+    "control": "POBMirror",
+    "text": "Mi&rror",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2968,
+    "control": "POConvert",
+    "text": "Convert Notes",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2975,
+    "control": "mnPreview",
+    "text": "&Preview",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2983,
+    "control": "mnPlayB",
+    "text": "Play from &beginning",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2991,
+    "control": "mnPlay",
+    "text": "&Play from here",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 2999,
+    "control": "mnStop",
+    "text": "&Stop",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3006,
+    "control": "mnAbout",
+    "text": "&About",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3013,
+    "control": "mnAbout1",
+    "text": "&About",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3019,
+    "control": "mnUpdate",
+    "text": "Check &Updates",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3025,
+    "control": "mnUpdateC",
+    "text": "Check Updates (Chinese)",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3040,
+    "control": "mnSMenu",
+    "text": "&Main Menu",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3049,
+    "control": "mnSTB",
+    "text": "&ToolBar",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3058,
+    "control": "mnSOP",
+    "text": "&Options Panel",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3067,
+    "control": "mnSStatus",
+    "text": "&Status Bar",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3074,
+    "control": "mnSLSplitter",
+    "text": "&Left Splitter",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3081,
+    "control": "mnSRSplitter",
+    "text": "&Right Splitter",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3095,
+    "control": "CGShow",
+    "text": "Grid",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3104,
+    "control": "CGShowS",
+    "text": "Sub",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3113,
+    "control": "CGShowBG",
+    "text": "BackGround",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3122,
+    "control": "CGShowM",
+    "text": "Measure Index",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3131,
+    "control": "CGShowMB",
+    "text": "Measure Line",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3140,
+    "control": "CGShowV",
+    "text": "Vertical Line",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3149,
+    "control": "CGShowC",
+    "text": "Column Caption",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3163,
+    "control": "CGBPM",
+    "text": "BPM",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3170,
+    "control": "CGSTOP",
+    "text": "STOP",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3177,
+    "control": "CGBLP",
+    "text": "BGA / Layer / Poor",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3189,
+    "control": "TBMain",
+    "text": "Main Toolbar",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3198,
+    "control": "TBNew",
+    "text": "New (Ctrl+N)",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3208,
+    "control": "TBOpen",
+    "text": "Open (Ctrl+O)",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3216,
+    "control": "TBOpenR0",
+    "text": "Recent #0",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3224,
+    "control": "TBOpenR1",
+    "text": "Recent #1",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3232,
+    "control": "TBOpenR2",
+    "text": "Recent #2",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3240,
+    "control": "TBOpenR3",
+    "text": "Recent #3",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3248,
+    "control": "TBOpenR4",
+    "text": "Recent #4",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3260,
+    "control": "TBImportSM",
+    "text": "Import from .SM file",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3267,
+    "control": "TBImportIBMSC",
+    "text": "Import from .IBMSC file",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3277,
+    "control": "TBSave",
+    "text": "Save (Ctrl+S)",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3284,
+    "control": "TBSaveAs",
+    "text": "Save As...",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3291,
+    "control": "TBExport",
+    "text": "Export .IBMSC file",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3305,
+    "control": "TBCut",
+    "text": "Cut (Ctrl+X)",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3314,
+    "control": "TBCopy",
+    "text": "Copy (Ctrl+C)",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3323,
+    "control": "TBPaste",
+    "text": "Paste (Ctrl+V)",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3332,
+    "control": "TBFind",
+    "text": "Find / Delete / Replace (Ctrl+F)",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3351,
+    "control": "TBMyO2",
+    "text": "MyO2 ToolBox (Chinese Only)",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3368,
+    "control": "TBErrorCheck",
+    "text": "Error Check",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3380,
+    "control": "TBPreviewOnClick",
+    "text": "Preview On Click",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3390,
+    "control": "TBShowFileName",
+    "text": "Show File Name on Notes",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3405,
+    "control": "TBUndo",
+    "text": "Undo (Ctrl+Z)",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3415,
+    "control": "TBRedo",
+    "text": "Redo (Ctrl+Y)",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3432,
+    "control": "TBNTInput",
+    "text": "LongNote Input Style - NoteTool/BMSE",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3441,
+    "control": "TBTimeSelect",
+    "text": "Time Selection Tool (F1)",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3452,
+    "control": "TBSelect",
+    "text": "Select Tool (F2)",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3461,
+    "control": "TBWrite",
+    "text": "Write Tool (F3)",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3475,
+    "control": "TBPlayB",
+    "text": "Play from beginning (F5)",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3484,
+    "control": "TBPlay",
+    "text": "Play from here (F6)",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3493,
+    "control": "TBStop",
+    "text": "Stop (F7)",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3502,
+    "control": "TBPOptions",
+    "text": "Player Options",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3516,
+    "control": "TBVOptions",
+    "text": "Visual Options",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3525,
+    "control": "TBGOptions",
+    "text": "General Options",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3534,
+    "control": "TBAbout",
+    "text": "About",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3549,
+    "control": "POBStorm",
+    "text": "Storm",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3573,
+    "control": "FStatus2",
+    "text": "Status",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3613,
+    "control": "BVCReverse",
+    "text": "Reverse Selection",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3619,
+    "control": "LblMultiply",
+    "text": "×",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3635,
+    "control": "LblDivide",
+    "text": "÷",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3654,
+    "control": "BVCApply",
+    "text": "By Multiple",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3673,
+    "control": "BVCCalculate",
+    "text": "By Value",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3685,
+    "control": "FStatus",
+    "text": "Status",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3692,
+    "control": "FSC",
+    "text": "BPM",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3719,
+    "control": "FSP1",
+    "text": "9.41176470588235 / 9999",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3729,
+    "control": "FSP3",
+    "text": "9999 / 9999",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3739,
+    "control": "FSP2",
+    "text": "112.941176470588 / 9999",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3747,
+    "control": "FSP4",
+    "text": "112.941176470588",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3756,
+    "control": "FST",
+    "text": "Length = 0",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3763,
+    "control": "FSH",
+    "text": "Hidden",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3770,
+    "control": "FSE",
+    "text": "Error",
+    "status": "unverified"
+  },
+  {
+    "form": "Form1.Designer.vb",
+    "line": 3792,
+    "control": "ToolStripContainer1",
+    "text": "ToolStripContainer1",
+    "status": "unverified"
+  },
+  {
+    "form": "dgStatistics.Designer.vb",
+    "line": 53,
+    "control": "OK_Button",
+    "text": "OK",
+    "status": "unverified"
+  },
+  {
+    "form": "dgStatistics.Designer.vb",
+    "line": 107,
+    "control": "Label2",
+    "text": "Total",
+    "status": "unverified"
+  },
+  {
+    "form": "dgStatistics.Designer.vb",
+    "line": 119,
+    "control": "Label15",
+    "text": "Errors",
+    "status": "unverified"
+  },
+  {
+    "form": "dgStatistics.Designer.vb",
+    "line": 132,
+    "control": "Label1",
+    "text": "Total",
+    "status": "unverified"
+  },
+  {
+    "form": "dgStatistics.Designer.vb",
+    "line": 146,
+    "control": "Label6",
+    "text": "BPM",
+    "status": "unverified"
+  },
+  {
+    "form": "dgStatistics.Designer.vb",
+    "line": 159,
+    "control": "Label7",
+    "text": "STOP",
+    "status": "unverified"
+  },
+  {
+    "form": "dgStatistics.Designer.vb",
+    "line": 173,
+    "control": "Label8",
+    "text": "A1-A8",
+    "status": "unverified"
+  },
+  {
+    "form": "dgStatistics.Designer.vb",
+    "line": 186,
+    "control": "Label9",
+    "text": "D1-D8",
+    "status": "unverified"
+  },
+  {
+    "form": "dgStatistics.Designer.vb",
+    "line": 200,
+    "control": "Label10",
+    "text": "BGM",
+    "status": "unverified"
+  },
+  {
+    "form": "dgStatistics.Designer.vb",
+    "line": 212,
+    "control": "Label11",
+    "text": "Short",
+    "status": "unverified"
+  },
+  {
+    "form": "dgStatistics.Designer.vb",
+    "line": 224,
+    "control": "Label12",
+    "text": "Long",
+    "status": "unverified"
+  },
+  {
+    "form": "dgStatistics.Designer.vb",
+    "line": 236,
+    "control": "Label13",
+    "text": "LnObj",
+    "status": "unverified"
+  },
+  {
+    "form": "dgStatistics.Designer.vb",
+    "line": 248,
+    "control": "Label14",
+    "text": "Hidden",
+    "status": "unverified"
+  },
+  {
+    "form": "ColorPicker.Designer.vb",
+    "line": 66,
+    "control": "OK_Button",
+    "text": "OK",
+    "status": "unverified"
+  },
+  {
+    "form": "ColorPicker.Designer.vb",
+    "line": 76,
+    "control": "Cancel_Button",
+    "text": "Cancel",
+    "status": "unverified"
+  },
+  {
+    "form": "ColorPicker.Designer.vb",
+    "line": 120,
+    "control": "rbH",
+    "text": "H (0-359)",
+    "status": "unverified"
+  },
+  {
+    "form": "ColorPicker.Designer.vb",
+    "line": 133,
+    "control": "rbS",
+    "text": "S (0-1000)",
+    "status": "unverified"
+  },
+  {
+    "form": "ColorPicker.Designer.vb",
+    "line": 144,
+    "control": "rbL",
+    "text": "L (0-1000)",
+    "status": "unverified"
+  },
+  {
+    "form": "ColorPicker.Designer.vb",
+    "line": 155,
+    "control": "rbR",
+    "text": "R (0-255)",
+    "status": "unverified"
+  },
+  {
+    "form": "ColorPicker.Designer.vb",
+    "line": 166,
+    "control": "rbG",
+    "text": "G (0-255)",
+    "status": "unverified"
+  },
+  {
+    "form": "ColorPicker.Designer.vb",
+    "line": 177,
+    "control": "rbB",
+    "text": "B (0-255)",
+    "status": "unverified"
+  },
+  {
+    "form": "ColorPicker.Designer.vb",
+    "line": 235,
+    "control": "Label1",
+    "text": "Precision:",
+    "status": "unverified"
+  },
+  {
+    "form": "ColorPicker.Designer.vb",
+    "line": 243,
+    "control": "tStr",
+    "text": "FF000000",
+    "status": "unverified"
+  },
+  {
+    "form": "ColorPicker.Designer.vb",
+    "line": 252,
+    "control": "Label2",
+    "text": "#",
+    "status": "unverified"
+  },
+  {
+    "form": "ColorPicker.Designer.vb",
+    "line": 272,
+    "control": "rbA",
+    "text": "A (0-255)",
+    "status": "unverified"
+  }
+]

@@ -1,0 +1,378 @@
+export const themeMetadata = {
+  "IIDX": {
+    "visual": {
+      "ColumnTitle": {
+        "Value": "-16711936"
+      },
+      "ColumnTitleFont": {
+        "Name": "Tahoma",
+        "Size": "8",
+        "Style": "0"
+      },
+      "Bg": {
+        "Value": "-16777216"
+      },
+      "Grid": {
+        "Value": "893008442"
+      },
+      "Sub": {
+        "Value": "1530542650"
+      },
+      "VLine": {
+        "Value": "-13158601"
+      },
+      "MLine": {
+        "Value": "1599230546"
+      },
+      "BGMWav": {
+        "Value": "1354809536"
+      },
+      "SelBox": {
+        "Value": "-1056964609"
+      },
+      "TSCursor": {
+        "Value": "-1056997248"
+      },
+      "TSHalf": {
+        "Value": "-2139062017"
+      },
+      "TSDeltaMouseOver": {
+        "Value": "5"
+      },
+      "TSMouseOver": {
+        "Value": "-2130739072"
+      },
+      "TSSel": {
+        "Value": "855605376"
+      },
+      "TSBPM": {
+        "Value": "855605376"
+      },
+      "TSBPMFont": {
+        "Name": "Verdana",
+        "Size": "9",
+        "Style": "1"
+      },
+      "MiddleDeltaRelease": {
+        "Value": "1"
+      },
+      "kHeight": {
+        "Value": "10"
+      },
+      "kFont": {
+        "Name": "Verdana",
+        "Size": "9",
+        "Style": "1"
+      },
+      "kMFont": {
+        "Name": "Verdana",
+        "Size": "9",
+        "Style": "0"
+      },
+      "kLabelVShift": {
+        "Value": "-2"
+      },
+      "kLabelHShift": {
+        "Value": "0"
+      },
+      "kLabelHShiftL": {
+        "Value": "2"
+      },
+      "kMouseOver": {
+        "Value": "-16711936"
+      },
+      "kMouseOverE": {
+        "Value": "-16711681"
+      },
+      "kSelected": {
+        "Value": "-65536"
+      },
+      "kOpacity": {
+        "Value": "0.5"
+      }
+    },
+    "sourceXml": "<?xml version=\"1.0\" encoding=\"utf-16\"?>\n<iBMSC Major=\"2\" Minor=\"4\" Build=\"0\">\n    <Columns>\n        <Column Index=\"0\" Width=\"50\" Title=\"Measure\" NoteColor=\"0\" TextColor=\"-16711681\" LongNoteColor=\"0\" LongTextColor=\"-16711681\" BG=\"0\" />\n        <Column Index=\"1\" Width=\"60\" Title=\"BPM\" NoteColor=\"0\" TextColor=\"-65536\" LongNoteColor=\"0\" LongTextColor=\"-65536\" BG=\"0\" />\n        <Column Index=\"2\" Width=\"50\" Title=\"STOP\" NoteColor=\"0\" TextColor=\"-65536\" LongNoteColor=\"0\" LongTextColor=\"-65536\" BG=\"0\" />\n        <Column Index=\"3\" Width=\"5\" Title=\"\" NoteColor=\"0\" TextColor=\"0\" LongNoteColor=\"0\" LongTextColor=\"0\" BG=\"0\" />\n        <Column Index=\"4\" Width=\"60\" Title=\"A1\" NoteColor=\"-698023\" TextColor=\"-16777216\" LongNoteColor=\"-1677208\" LongTextColor=\"-16777216\" BG=\"348078144\" />\n        <Column Index=\"5\" Width=\"40\" Title=\"A2\" NoteColor=\"-5592406\" TextColor=\"-16777216\" LongNoteColor=\"-4144960\" LongTextColor=\"-16777216\" BG=\"679510144\" />\n        <Column Index=\"6\" Width=\"30\" Title=\"A3\" NoteColor=\"-10319361\" TextColor=\"-16777216\" LongNoteColor=\"-9268753\" LongTextColor=\"-16777216\" BG=\"356335042\" />\n        <Column Index=\"7\" Width=\"40\" Title=\"A4\" NoteColor=\"-5592406\" TextColor=\"-16777216\" LongNoteColor=\"-4144960\" LongTextColor=\"-16777216\" BG=\"679510144\" />\n        <Column Index=\"8\" Width=\"30\" Title=\"A5\" NoteColor=\"-10319361\" TextColor=\"-16777216\" LongNoteColor=\"-9268753\" LongTextColor=\"-16777216\" BG=\"356335042\" />\n        <Column Index=\"9\" Width=\"40\" Title=\"A6\" NoteColor=\"-5592406\" TextColor=\"-16777216\" LongNoteColor=\"-4144960\" LongTextColor=\"-16777216\" BG=\"679510144\" />\n        <Column Index=\"10\" Width=\"30\" Title=\"A7\" NoteColor=\"-10319361\" TextColor=\"-16777216\" LongNoteColor=\"-9268753\" LongTextColor=\"-16777216\" BG=\"356335042\" />\n        <Column Index=\"11\" Width=\"40\" Title=\"A8\" NoteColor=\"-5592406\" TextColor=\"-16777216\" LongNoteColor=\"-4144960\" LongTextColor=\"-16777216\" BG=\"679510144\" />\n        <Column Index=\"12\" Width=\"5\" Title=\"\" NoteColor=\"0\" TextColor=\"0\" LongNoteColor=\"0\" LongTextColor=\"0\" BG=\"0\" />\n        <Column Index=\"13\" Width=\"40\" Title=\"D1\" NoteColor=\"-5592406\" TextColor=\"-16777216\" LongNoteColor=\"-4144960\" LongTextColor=\"-16777216\" BG=\"679510144\" />\n        <Column Index=\"14\" Width=\"30\" Title=\"D2\" NoteColor=\"-10319361\" TextColor=\"-16777216\" LongNoteColor=\"-9268753\" LongTextColor=\"-16777216\" BG=\"356335042\" />\n        <Column Index=\"15\" Width=\"40\" Title=\"D3\" NoteColor=\"-5592406\" TextColor=\"-16777216\" LongNoteColor=\"-4144960\" LongTextColor=\"-16777216\" BG=\"679510144\" />\n        <Column Index=\"16\" Width=\"30\" Title=\"D4\" NoteColor=\"-10319361\" TextColor=\"-16777216\" LongNoteColor=\"-9268753\" LongTextColor=\"-16777216\" BG=\"356335042\" />\n        <Column Index=\"17\" Width=\"40\" Title=\"D5\" NoteColor=\"-5592406\" TextColor=\"-16777216\" LongNoteColor=\"-4144960\" LongTextColor=\"-16777216\" BG=\"679510144\" />\n        <Column Index=\"18\" Width=\"30\" Title=\"D6\" NoteColor=\"-10319361\" TextColor=\"-16777216\" LongNoteColor=\"-9268753\" LongTextColor=\"-16777216\" BG=\"356335042\" />\n        <Column Index=\"19\" Width=\"40\" Title=\"D7\" NoteColor=\"-5592406\" TextColor=\"-16777216\" LongNoteColor=\"-4144960\" LongTextColor=\"-16777216\" BG=\"679510144\" />\n        <Column Index=\"20\" Width=\"60\" Title=\"D8\" NoteColor=\"-698023\" TextColor=\"-16777216\" LongNoteColor=\"-1677208\" LongTextColor=\"-16777216\" BG=\"348078144\" />\n        <Column Index=\"21\" Width=\"5\" Title=\"\" NoteColor=\"0\" TextColor=\"0\" LongNoteColor=\"0\" LongTextColor=\"0\" BG=\"0\" />\n        <Column Index=\"22\" Width=\"40\" Title=\"BGA\" NoteColor=\"-7546998\" TextColor=\"-16777216\" LongNoteColor=\"-7285874\" LongTextColor=\"-16777216\" BG=\"0\" />\n        <Column Index=\"23\" Width=\"40\" Title=\"LAYER\" NoteColor=\"-7546998\" TextColor=\"-16777216\" LongNoteColor=\"-7285874\" LongTextColor=\"-16777216\" BG=\"0\" />\n        <Column Index=\"24\" Width=\"40\" Title=\"POOR\" NoteColor=\"-7546998\" TextColor=\"-16777216\" LongNoteColor=\"-7285874\" LongTextColor=\"-16777216\" BG=\"0\" />\n        <Column Index=\"25\" Width=\"5\" Title=\"\" NoteColor=\"0\" TextColor=\"0\" LongNoteColor=\"0\" LongTextColor=\"0\" BG=\"0\" />\n        <Column Index=\"26\" Width=\"40\" Title=\"B\" NoteColor=\"-1998720\" TextColor=\"-16777216\" LongNoteColor=\"-2325115\" LongTextColor=\"-16777216\" BG=\"0\" />\n    </Columns>\n    <VisualSettings>\n        <ColumnTitle Value=\"-16711936\" />\n        <ColumnTitleFont Name=\"Tahoma\" Size=\"8\" Style=\"0\" />\n        <Bg Value=\"-16777216\" />\n        <Grid Value=\"893008442\" />\n        <Sub Value=\"1530542650\" />\n        <VLine Value=\"-13158601\" />\n        <MLine Value=\"1599230546\" />\n        <BGMWav Value=\"1354809536\" />\n        <SelBox Value=\"-1056964609\" />\n        <TSCursor Value=\"-1056997248\" />\n        <TSHalf Value=\"-2139062017\" />\n        <TSDeltaMouseOver Value=\"5\" />\n        <TSMouseOver Value=\"-2130739072\" />\n        <TSSel Value=\"855605376\" />\n        <TSBPM Value=\"855605376\" />\n        <TSBPMFont Name=\"Verdana\" Size=\"9\" Style=\"1\" />\n        <MiddleDeltaRelease Value=\"1\" />\n        <kHeight Value=\"10\" />\n        <kFont Name=\"Verdana\" Size=\"9\" Style=\"1\" />\n        <kMFont Name=\"Verdana\" Size=\"9\" Style=\"0\" />\n        <kLabelVShift Value=\"-2\" />\n        <kLabelHShift Value=\"0\" />\n        <kLabelHShiftL Value=\"2\" />\n        <kMouseOver Value=\"-16711936\" />\n        <kMouseOverE Value=\"-16711681\" />\n        <kSelected Value=\"-65536\" />\n        <kOpacity Value=\"0.5\" />\n    </VisualSettings>\n</iBMSC>"
+  },
+  "O2Mania": {
+    "visual": {
+      "ColumnTitle": {
+        "Value": "-16711936"
+      },
+      "ColumnTitleFont": {
+        "Name": "Tahoma",
+        "Size": "8",
+        "Style": "0"
+      },
+      "Bg": {
+        "Value": "-16777216"
+      },
+      "Grid": {
+        "Value": "893008442"
+      },
+      "Sub": {
+        "Value": "1530542650"
+      },
+      "VLine": {
+        "Value": "-13158601"
+      },
+      "MLine": {
+        "Value": "1599230546"
+      },
+      "BGMWav": {
+        "Value": "1354809536"
+      },
+      "SelBox": {
+        "Value": "-1056964609"
+      },
+      "TSCursor": {
+        "Value": "-1056997248"
+      },
+      "TSHalf": {
+        "Value": "-2139062017"
+      },
+      "TSDeltaMouseOver": {
+        "Value": "5"
+      },
+      "TSMouseOver": {
+        "Value": "-2130739072"
+      },
+      "TSSel": {
+        "Value": "855605376"
+      },
+      "TSBPM": {
+        "Value": "855605376"
+      },
+      "TSBPMFont": {
+        "Name": "Verdana",
+        "Size": "9",
+        "Style": "1"
+      },
+      "MiddleDeltaRelease": {
+        "Value": "1"
+      },
+      "kHeight": {
+        "Value": "10"
+      },
+      "kFont": {
+        "Name": "Verdana",
+        "Size": "9",
+        "Style": "1"
+      },
+      "kMFont": {
+        "Name": "Verdana",
+        "Size": "9",
+        "Style": "0"
+      },
+      "kLabelVShift": {
+        "Value": "-2"
+      },
+      "kLabelHShift": {
+        "Value": "0"
+      },
+      "kLabelHShiftL": {
+        "Value": "2"
+      },
+      "kMouseOver": {
+        "Value": "-16711936"
+      },
+      "kMouseOverE": {
+        "Value": "-16711681"
+      },
+      "kSelected": {
+        "Value": "-65536"
+      },
+      "kOpacity": {
+        "Value": "0.5"
+      }
+    },
+    "sourceXml": "<?xml version=\"1.0\" encoding=\"utf-16\"?>\n<iBMSC Major=\"2\" Minor=\"4\" Build=\"0\">\n    <Columns>\n        <Column Index=\"0\" Width=\"50\" Title=\"Measure\" NoteColor=\"0\" TextColor=\"-16711681\" LongNoteColor=\"0\" LongTextColor=\"-16711681\" BG=\"0\" />\n        <Column Index=\"1\" Width=\"60\" Title=\"BPM\" NoteColor=\"0\" TextColor=\"-65536\" LongNoteColor=\"0\" LongTextColor=\"-65536\" BG=\"0\" />\n        <Column Index=\"2\" Width=\"50\" Title=\"STOP\" NoteColor=\"0\" TextColor=\"-65536\" LongNoteColor=\"0\" LongTextColor=\"-65536\" BG=\"0\" />\n        <Column Index=\"3\" Width=\"5\" Title=\"\" NoteColor=\"0\" TextColor=\"0\" LongNoteColor=\"0\" LongTextColor=\"0\" BG=\"0\" />\n        <Column Index=\"4\" Width=\"42\" Title=\"A1\" NoteColor=\"-5197648\" TextColor=\"-16777216\" LongNoteColor=\"-4144960\" LongTextColor=\"-16777216\" BG=\"352321535\" />\n        <Column Index=\"5\" Width=\"30\" Title=\"A2\" NoteColor=\"-10309377\" TextColor=\"-16777216\" LongNoteColor=\"-9785097\" LongTextColor=\"-16777216\" BG=\"335557631\" />\n        <Column Index=\"6\" Width=\"42\" Title=\"A3\" NoteColor=\"-5197648\" TextColor=\"-16777216\" LongNoteColor=\"-4144960\" LongTextColor=\"-16777216\" BG=\"352321535\" />\n        <Column Index=\"7\" Width=\"45\" Title=\"A4\" NoteColor=\"-14238\" TextColor=\"-16777216\" LongNoteColor=\"-539030\" LongTextColor=\"-16777216\" BG=\"385059596\" />\n        <Column Index=\"8\" Width=\"42\" Title=\"A5\" NoteColor=\"-5197648\" TextColor=\"-16777216\" LongNoteColor=\"-4144960\" LongTextColor=\"-16777216\" BG=\"352321535\" />\n        <Column Index=\"9\" Width=\"30\" Title=\"A6\" NoteColor=\"-10309377\" TextColor=\"-16777216\" LongNoteColor=\"-9785097\" LongTextColor=\"-16777216\" BG=\"335557631\" />\n        <Column Index=\"10\" Width=\"42\" Title=\"A7\" NoteColor=\"-5197648\" TextColor=\"-16777216\" LongNoteColor=\"-4144960\" LongTextColor=\"-16777216\" BG=\"352321535\" />\n        <Column Index=\"11\" Width=\"40\" Title=\"A8\" NoteColor=\"-8355712\" TextColor=\"-16777216\" LongNoteColor=\"-7303024\" LongTextColor=\"-16777216\" BG=\"0\" />\n        <Column Index=\"12\" Width=\"5\" Title=\"\" NoteColor=\"0\" TextColor=\"0\" LongNoteColor=\"0\" LongTextColor=\"0\" BG=\"0\" />\n        <Column Index=\"13\" Width=\"42\" Title=\"D1\" NoteColor=\"-5197648\" TextColor=\"-16777216\" LongNoteColor=\"-4144960\" LongTextColor=\"-16777216\" BG=\"352321535\" />\n        <Column Index=\"14\" Width=\"30\" Title=\"D2\" NoteColor=\"-10309377\" TextColor=\"-16777216\" LongNoteColor=\"-9785097\" LongTextColor=\"-16777216\" BG=\"335557631\" />\n        <Column Index=\"15\" Width=\"42\" Title=\"D3\" NoteColor=\"-5197648\" TextColor=\"-16777216\" LongNoteColor=\"-4144960\" LongTextColor=\"-16777216\" BG=\"352321535\" />\n        <Column Index=\"16\" Width=\"45\" Title=\"D4\" NoteColor=\"-14238\" TextColor=\"-16777216\" LongNoteColor=\"-539030\" LongTextColor=\"-16777216\" BG=\"385059596\" />\n        <Column Index=\"17\" Width=\"42\" Title=\"D5\" NoteColor=\"-5197648\" TextColor=\"-16777216\" LongNoteColor=\"-4144960\" LongTextColor=\"-16777216\" BG=\"352321535\" />\n        <Column Index=\"18\" Width=\"30\" Title=\"D6\" NoteColor=\"-10309377\" TextColor=\"-16777216\" LongNoteColor=\"-9785097\" LongTextColor=\"-16777216\" BG=\"335557631\" />\n        <Column Index=\"19\" Width=\"42\" Title=\"D7\" NoteColor=\"-5197648\" TextColor=\"-16777216\" LongNoteColor=\"-4144960\" LongTextColor=\"-16777216\" BG=\"352321535\" />\n        <Column Index=\"20\" Width=\"40\" Title=\"D8\" NoteColor=\"-8355712\" TextColor=\"-16777216\" LongNoteColor=\"-7303024\" LongTextColor=\"-16777216\" BG=\"0\" />\n        <Column Index=\"21\" Width=\"5\" Title=\"\" NoteColor=\"0\" TextColor=\"0\" LongNoteColor=\"0\" LongTextColor=\"0\" BG=\"0\" />\n        <Column Index=\"22\" Width=\"40\" Title=\"BGA\" NoteColor=\"-7546998\" TextColor=\"-16777216\" LongNoteColor=\"-7285874\" LongTextColor=\"-16777216\" BG=\"0\" />\n        <Column Index=\"23\" Width=\"40\" Title=\"LAYER\" NoteColor=\"-7546998\" TextColor=\"-16777216\" LongNoteColor=\"-7285874\" LongTextColor=\"-16777216\" BG=\"0\" />\n        <Column Index=\"24\" Width=\"40\" Title=\"POOR\" NoteColor=\"-7546998\" TextColor=\"-16777216\" LongNoteColor=\"-7285874\" LongTextColor=\"-16777216\" BG=\"0\" />\n        <Column Index=\"25\" Width=\"5\" Title=\"\" NoteColor=\"0\" TextColor=\"0\" LongNoteColor=\"0\" LongTextColor=\"0\" BG=\"0\" />\n        <Column Index=\"26\" Width=\"40\" Title=\"B\" NoteColor=\"-1998720\" TextColor=\"-16777216\" LongNoteColor=\"-2325115\" LongTextColor=\"-16777216\" BG=\"0\" />\n    </Columns>\n    <VisualSettings>\n        <ColumnTitle Value=\"-16711936\" />\n        <ColumnTitleFont Name=\"Tahoma\" Size=\"8\" Style=\"0\" />\n        <Bg Value=\"-16777216\" />\n        <Grid Value=\"893008442\" />\n        <Sub Value=\"1530542650\" />\n        <VLine Value=\"-13158601\" />\n        <MLine Value=\"1599230546\" />\n        <BGMWav Value=\"1354809536\" />\n        <SelBox Value=\"-1056964609\" />\n        <TSCursor Value=\"-1056997248\" />\n        <TSHalf Value=\"-2139062017\" />\n        <TSDeltaMouseOver Value=\"5\" />\n        <TSMouseOver Value=\"-2130739072\" />\n        <TSSel Value=\"855605376\" />\n        <TSBPM Value=\"855605376\" />\n        <TSBPMFont Name=\"Verdana\" Size=\"9\" Style=\"1\" />\n        <MiddleDeltaRelease Value=\"1\" />\n        <kHeight Value=\"10\" />\n        <kFont Name=\"Verdana\" Size=\"9\" Style=\"1\" />\n        <kMFont Name=\"Verdana\" Size=\"9\" Style=\"0\" />\n        <kLabelVShift Value=\"-2\" />\n        <kLabelHShift Value=\"0\" />\n        <kLabelHShiftL Value=\"2\" />\n        <kMouseOver Value=\"-16711936\" />\n        <kMouseOverE Value=\"-16711681\" />\n        <kSelected Value=\"-65536\" />\n        <kOpacity Value=\"0.5\" />\n    </VisualSettings>\n</iBMSC>"
+  },
+  "MyO2_4K": {
+    "visual": {
+      "ColumnTitle": {
+        "Value": "-16711936"
+      },
+      "ColumnTitleFont": {
+        "Name": "Tahoma",
+        "Size": "8",
+        "Style": "0"
+      },
+      "Bg": {
+        "Value": "-16777216"
+      },
+      "Grid": {
+        "Value": "893008442"
+      },
+      "Sub": {
+        "Value": "1530542650"
+      },
+      "VLine": {
+        "Value": "-13158601"
+      },
+      "MLine": {
+        "Value": "1599230546"
+      },
+      "BGMWav": {
+        "Value": "1354809536"
+      },
+      "SelBox": {
+        "Value": "-1056964609"
+      },
+      "TSCursor": {
+        "Value": "-1056997248"
+      },
+      "TSHalf": {
+        "Value": "-2139062017"
+      },
+      "TSDeltaMouseOver": {
+        "Value": "5"
+      },
+      "TSMouseOver": {
+        "Value": "-2130739072"
+      },
+      "TSSel": {
+        "Value": "855605376"
+      },
+      "TSBPM": {
+        "Value": "855605376"
+      },
+      "TSBPMFont": {
+        "Name": "Verdana",
+        "Size": "9",
+        "Style": "1"
+      },
+      "MiddleDeltaRelease": {
+        "Value": "1"
+      },
+      "kHeight": {
+        "Value": "10"
+      },
+      "kFont": {
+        "Name": "Verdana",
+        "Size": "9",
+        "Style": "1"
+      },
+      "kMFont": {
+        "Name": "Verdana",
+        "Size": "9",
+        "Style": "0"
+      },
+      "kLabelVShift": {
+        "Value": "-2"
+      },
+      "kLabelHShift": {
+        "Value": "0"
+      },
+      "kLabelHShiftL": {
+        "Value": "2"
+      },
+      "kMouseOver": {
+        "Value": "-16711936"
+      },
+      "kMouseOverE": {
+        "Value": "-16711681"
+      },
+      "kSelected": {
+        "Value": "-65536"
+      },
+      "kOpacity": {
+        "Value": "0.5"
+      }
+    },
+    "sourceXml": "<?xml version=\"1.0\" encoding=\"utf-16\"?>\n<iBMSC Major=\"2\" Minor=\"4\" Build=\"0\">\n    <Columns>\n        <Column Index=\"0\" Width=\"50\" Title=\"Measure\" NoteColor=\"0\" TextColor=\"-16711681\" LongNoteColor=\"0\" LongTextColor=\"-16711681\" BG=\"0\" />\n        <Column Index=\"1\" Width=\"60\" Title=\"BPM\" NoteColor=\"0\" TextColor=\"-65536\" LongNoteColor=\"0\" LongTextColor=\"-65536\" BG=\"0\" />\n        <Column Index=\"2\" Width=\"50\" Title=\"STOP\" NoteColor=\"0\" TextColor=\"-65536\" LongNoteColor=\"0\" LongTextColor=\"-65536\" BG=\"0\" />\n        <Column Index=\"3\" Width=\"5\" Title=\"\" NoteColor=\"0\" TextColor=\"0\" LongNoteColor=\"0\" LongTextColor=\"0\" BG=\"0\" />\n        <Column Index=\"4\" Width=\"50\" Title=\"A1\" NoteColor=\"-887629\" TextColor=\"-16777216\" LongNoteColor=\"-1736269\" LongTextColor=\"-16777216\" BG=\"384309120\" />\n        <Column Index=\"5\" Width=\"50\" Title=\"A2\" NoteColor=\"-8812801\" TextColor=\"-16777216\" LongNoteColor=\"-7958030\" LongTextColor=\"-16777216\" BG=\"503323135\" />\n        <Column Index=\"6\" Width=\"50\" Title=\"A3\" NoteColor=\"-8812801\" TextColor=\"-16777216\" LongNoteColor=\"-7958030\" LongTextColor=\"-16777216\" BG=\"503323135\" />\n        <Column Index=\"7\" Width=\"50\" Title=\"A4\" NoteColor=\"-887629\" TextColor=\"-16777216\" LongNoteColor=\"-1736269\" LongTextColor=\"-16777216\" BG=\"384309120\" />\n        <Column Index=\"8\" Width=\"40\" Title=\"A5\" NoteColor=\"-6250336\" TextColor=\"-16777216\" LongNoteColor=\"-5197648\" LongTextColor=\"-16777216\" BG=\"0\" />\n        <Column Index=\"9\" Width=\"40\" Title=\"A6\" NoteColor=\"-6250336\" TextColor=\"-16777216\" LongNoteColor=\"-5197648\" LongTextColor=\"-16777216\" BG=\"0\" />\n        <Column Index=\"10\" Width=\"40\" Title=\"A7\" NoteColor=\"-6250336\" TextColor=\"-16777216\" LongNoteColor=\"-5197648\" LongTextColor=\"-16777216\" BG=\"0\" />\n        <Column Index=\"11\" Width=\"40\" Title=\"A8\" NoteColor=\"-6250336\" TextColor=\"-16777216\" LongNoteColor=\"-5197648\" LongTextColor=\"-16777216\" BG=\"0\" />\n        <Column Index=\"12\" Width=\"5\" Title=\"\" NoteColor=\"0\" TextColor=\"0\" LongNoteColor=\"0\" LongTextColor=\"0\" BG=\"0\" />\n        <Column Index=\"13\" Width=\"50\" Title=\"D1\" NoteColor=\"-887629\" TextColor=\"-16777216\" LongNoteColor=\"-1736269\" LongTextColor=\"-16777216\" BG=\"384309120\" />\n        <Column Index=\"14\" Width=\"50\" Title=\"D2\" NoteColor=\"-8812801\" TextColor=\"-16777216\" LongNoteColor=\"-7958030\" LongTextColor=\"-16777216\" BG=\"503323135\" />\n        <Column Index=\"15\" Width=\"50\" Title=\"D3\" NoteColor=\"-8812801\" TextColor=\"-16777216\" LongNoteColor=\"-7958030\" LongTextColor=\"-16777216\" BG=\"503323135\" />\n        <Column Index=\"16\" Width=\"50\" Title=\"D4\" NoteColor=\"-887629\" TextColor=\"-16777216\" LongNoteColor=\"-1736269\" LongTextColor=\"-16777216\" BG=\"384309120\" />\n        <Column Index=\"17\" Width=\"40\" Title=\"D5\" NoteColor=\"-6250336\" TextColor=\"-16777216\" LongNoteColor=\"-5197648\" LongTextColor=\"-16777216\" BG=\"0\" />\n        <Column Index=\"18\" Width=\"40\" Title=\"D6\" NoteColor=\"-6250336\" TextColor=\"-16777216\" LongNoteColor=\"-5197648\" LongTextColor=\"-16777216\" BG=\"0\" />\n        <Column Index=\"19\" Width=\"40\" Title=\"D7\" NoteColor=\"-6250336\" TextColor=\"-16777216\" LongNoteColor=\"-5197648\" LongTextColor=\"-16777216\" BG=\"0\" />\n        <Column Index=\"20\" Width=\"40\" Title=\"D8\" NoteColor=\"-6250336\" TextColor=\"-16777216\" LongNoteColor=\"-5197648\" LongTextColor=\"-16777216\" BG=\"0\" />\n        <Column Index=\"21\" Width=\"5\" Title=\"\" NoteColor=\"0\" TextColor=\"0\" LongNoteColor=\"0\" LongTextColor=\"0\" BG=\"0\" />\n        <Column Index=\"22\" Width=\"40\" Title=\"BGA\" NoteColor=\"-7546998\" TextColor=\"-16777216\" LongNoteColor=\"-7285874\" LongTextColor=\"-16777216\" BG=\"0\" />\n        <Column Index=\"23\" Width=\"40\" Title=\"LAYER\" NoteColor=\"-7546998\" TextColor=\"-16777216\" LongNoteColor=\"-7285874\" LongTextColor=\"-16777216\" BG=\"0\" />\n        <Column Index=\"24\" Width=\"40\" Title=\"POOR\" NoteColor=\"-7546998\" TextColor=\"-16777216\" LongNoteColor=\"-7285874\" LongTextColor=\"-16777216\" BG=\"0\" />\n        <Column Index=\"25\" Width=\"5\" Title=\"\" NoteColor=\"0\" TextColor=\"0\" LongNoteColor=\"0\" LongTextColor=\"0\" BG=\"0\" />\n        <Column Index=\"26\" Width=\"40\" Title=\"B\" NoteColor=\"-1998720\" TextColor=\"-16777216\" LongNoteColor=\"-2325115\" LongTextColor=\"-16777216\" BG=\"0\" />\n    </Columns>\n    <VisualSettings>\n        <ColumnTitle Value=\"-16711936\" />\n        <ColumnTitleFont Name=\"Tahoma\" Size=\"8\" Style=\"0\" />\n        <Bg Value=\"-16777216\" />\n        <Grid Value=\"893008442\" />\n        <Sub Value=\"1530542650\" />\n        <VLine Value=\"-13158601\" />\n        <MLine Value=\"1599230546\" />\n        <BGMWav Value=\"1354809536\" />\n        <SelBox Value=\"-1056964609\" />\n        <TSCursor Value=\"-1056997248\" />\n        <TSHalf Value=\"-2139062017\" />\n        <TSDeltaMouseOver Value=\"5\" />\n        <TSMouseOver Value=\"-2130739072\" />\n        <TSSel Value=\"855605376\" />\n        <TSBPM Value=\"855605376\" />\n        <TSBPMFont Name=\"Verdana\" Size=\"9\" Style=\"1\" />\n        <MiddleDeltaRelease Value=\"1\" />\n        <kHeight Value=\"10\" />\n        <kFont Name=\"Verdana\" Size=\"9\" Style=\"1\" />\n        <kMFont Name=\"Verdana\" Size=\"9\" Style=\"0\" />\n        <kLabelVShift Value=\"-2\" />\n        <kLabelHShift Value=\"0\" />\n        <kLabelHShiftL Value=\"2\" />\n        <kMouseOver Value=\"-16711936\" />\n        <kMouseOverE Value=\"-16711681\" />\n        <kSelected Value=\"-65536\" />\n        <kOpacity Value=\"0.5\" />\n    </VisualSettings>\n</iBMSC>"
+  },
+  "Pomu": {
+    "visual": {
+      "ColumnTitle": {
+        "Value": "-16711936"
+      },
+      "ColumnTitleFont": {
+        "Name": "Tahoma",
+        "Size": "8",
+        "Style": "0"
+      },
+      "Bg": {
+        "Value": "-16777216"
+      },
+      "Grid": {
+        "Value": "1599033167"
+      },
+      "Sub": {
+        "Value": "1536727192"
+      },
+      "VLine": {
+        "Value": "-13158601"
+      },
+      "MLine": {
+        "Value": "1608507359"
+      },
+      "BGMWav": {
+        "Value": "1354809536"
+      },
+      "SelBox": {
+        "Value": "-1056964609"
+      },
+      "TSCursor": {
+        "Value": "-1056997248"
+      },
+      "TSHalf": {
+        "Value": "-2139062017"
+      },
+      "TSDeltaMouseOver": {
+        "Value": "5"
+      },
+      "TSMouseOver": {
+        "Value": "-2130739072"
+      },
+      "TSSel": {
+        "Value": "855605376"
+      },
+      "TSBPM": {
+        "Value": "855605376"
+      },
+      "TSBPMFont": {
+        "Name": "Verdana",
+        "Size": "9",
+        "Style": "1"
+      },
+      "MiddleDeltaRelease": {
+        "Value": "1"
+      },
+      "kHeight": {
+        "Value": "10"
+      },
+      "kFont": {
+        "Name": "Verdana",
+        "Size": "9",
+        "Style": "0"
+      },
+      "kMFont": {
+        "Name": "Verdana",
+        "Size": "9",
+        "Style": "0"
+      },
+      "kLabelVShift": {
+        "Value": "-2"
+      },
+      "kLabelHShift": {
+        "Value": "0"
+      },
+      "kLabelHShiftL": {
+        "Value": "2"
+      },
+      "kMouseOver": {
+        "Value": "-16711936"
+      },
+      "kMouseOverE": {
+        "Value": "-16711681"
+      },
+      "kSelected": {
+        "Value": "-65536"
+      },
+      "kOpacity": {
+        "Value": "0.5"
+      }
+    },
+    "sourceXml": "<?xml version=\"1.0\" encoding=\"utf-16\"?>\n<iBMSC Major=\"3\" Minor=\"0\" Build=\"0\">\n    <Columns>\n        <Column Index=\"0\" Width=\"50\" Title=\"Measure\" NoteColor=\"0\" TextColor=\"-1\" LongNoteColor=\"0\" LongTextColor=\"-4408132\" BG=\"0\" />\n        <Column Index=\"1\" Width=\"60\" Title=\"BPM\" NoteColor=\"0\" TextColor=\"-65536\" LongNoteColor=\"0\" LongTextColor=\"-65536\" BG=\"0\" />\n        <Column Index=\"2\" Width=\"50\" Title=\"STOP\" NoteColor=\"0\" TextColor=\"-65536\" LongNoteColor=\"0\" LongTextColor=\"-65536\" BG=\"0\" />\n        <Column Index=\"3\" Width=\"5\" Title=\"\" NoteColor=\"0\" TextColor=\"0\" LongNoteColor=\"0\" LongTextColor=\"0\" BG=\"0\" />\n        <Column Index=\"4\" Width=\"0\" Title=\"A1\" NoteColor=\"0\" TextColor=\"-16777216\" LongNoteColor=\"0\" LongTextColor=\"-16777216\" BG=\"0\" />\n        <Column Index=\"5\" Width=\"40\" Title=\"LW\" NoteColor=\"-8355712\" TextColor=\"-1\" LongNoteColor=\"-8355712\" LongTextColor=\"-1\" BG=\"-15461356\" />\n        <Column Index=\"6\" Width=\"30\" Title=\"LY\" NoteColor=\"-4474112\" TextColor=\"-1\" LongNoteColor=\"-4474112\" LongTextColor=\"-1\" BG=\"-14671872\" />\n        <Column Index=\"7\" Width=\"40\" Title=\"LG\" NoteColor=\"-15558638\" TextColor=\"-1\" LongNoteColor=\"-15558638\" LongTextColor=\"-1\" BG=\"-16769024\" />\n        <Column Index=\"8\" Width=\"30\" Title=\"LB\" NoteColor=\"-16776961\" TextColor=\"-1\" LongNoteColor=\"-16776961\" LongTextColor=\"-1\" BG=\"-16777184\" />\n        <Column Index=\"9\" Width=\"40\" Title=\"RED\" NoteColor=\"-65536\" TextColor=\"-1\" LongNoteColor=\"-65536\" LongTextColor=\"-1\" BG=\"-14680064\" />\n        <Column Index=\"10\" Width=\"0\" Title=\"A7\" NoteColor=\"0\" TextColor=\"-16777216\" LongNoteColor=\"0\" LongTextColor=\"-16777216\" BG=\"0\" />\n        <Column Index=\"11\" Width=\"0\" Title=\"A8\" NoteColor=\"0\" TextColor=\"-16777216\" LongNoteColor=\"0\" LongTextColor=\"-16777216\" BG=\"0\" />\n        <Column Index=\"12\" Width=\"0\" Title=\"\" NoteColor=\"0\" TextColor=\"0\" LongNoteColor=\"0\" LongTextColor=\"0\" BG=\"0\" />\n        <Column Index=\"13\" Width=\"0\" Title=\"D1\" NoteColor=\"0\" TextColor=\"-16777216\" LongNoteColor=\"0\" LongTextColor=\"-16777216\" BG=\"0\" />\n        <Column Index=\"14\" Width=\"30\" Title=\"RB\" NoteColor=\"-16776961\" TextColor=\"-1\" LongNoteColor=\"-16776961\" LongTextColor=\"-1\" BG=\"-16777184\" />\n        <Column Index=\"15\" Width=\"40\" Title=\"RG\" NoteColor=\"-15558638\" TextColor=\"-1\" LongNoteColor=\"-15558638\" LongTextColor=\"-1\" BG=\"-16769024\" />\n        <Column Index=\"16\" Width=\"30\" Title=\"RY\" NoteColor=\"-4474112\" TextColor=\"-1\" LongNoteColor=\"-4474112\" LongTextColor=\"-1\" BG=\"-14671872\" />\n        <Column Index=\"17\" Width=\"40\" Title=\"RW\" NoteColor=\"-8355712\" TextColor=\"-1\" LongNoteColor=\"-8355712\" LongTextColor=\"-1\" BG=\"-15461356\" />\n        <Column Index=\"18\" Width=\"0\" Title=\"D6\" NoteColor=\"0\" TextColor=\"-16777216\" LongNoteColor=\"0\" LongTextColor=\"-16777216\" BG=\"0\" />\n        <Column Index=\"19\" Width=\"0\" Title=\"D7\" NoteColor=\"0\" TextColor=\"-16777216\" LongNoteColor=\"0\" LongTextColor=\"-16777216\" BG=\"0\" />\n        <Column Index=\"20\" Width=\"0\" Title=\"D8\" NoteColor=\"0\" TextColor=\"-16777216\" LongNoteColor=\"0\" LongTextColor=\"-16777216\" BG=\"0\" />\n        <Column Index=\"21\" Width=\"5\" Title=\"\" NoteColor=\"0\" TextColor=\"0\" LongNoteColor=\"0\" LongTextColor=\"0\" BG=\"0\" />\n        <Column Index=\"22\" Width=\"40\" Title=\"BGA\" NoteColor=\"-16741376\" TextColor=\"-1\" LongNoteColor=\"-16741376\" LongTextColor=\"-1\" BG=\"-16770816\" />\n        <Column Index=\"23\" Width=\"40\" Title=\"LAYER\" NoteColor=\"-16741376\" TextColor=\"-1\" LongNoteColor=\"-16741376\" LongTextColor=\"-1\" BG=\"-16770816\" />\n        <Column Index=\"24\" Width=\"40\" Title=\"POOR\" NoteColor=\"-16741376\" TextColor=\"-1\" LongNoteColor=\"-16741376\" LongTextColor=\"-1\" BG=\"-16770816\" />\n        <Column Index=\"25\" Width=\"5\" Title=\"\" NoteColor=\"0\" TextColor=\"0\" LongNoteColor=\"0\" LongTextColor=\"0\" BG=\"0\" />\n        <Column Index=\"26\" Width=\"40\" Title=\"B\" NoteColor=\"-2293760\" TextColor=\"-1\" LongNoteColor=\"-2293760\" LongTextColor=\"-1\" BG=\"-15138816\" />\n    </Columns>\n    <VisualSettings>\n        <ColumnTitle Value=\"-16711936\" />\n        <ColumnTitleFont Name=\"Tahoma\" Size=\"8\" Style=\"0\" />\n        <Bg Value=\"-16777216\" />\n        <Grid Value=\"1599033167\" />\n        <Sub Value=\"1536727192\" />\n        <VLine Value=\"-13158601\" />\n        <MLine Value=\"1608507359\" />\n        <BGMWav Value=\"1354809536\" />\n        <SelBox Value=\"-1056964609\" />\n        <TSCursor Value=\"-1056997248\" />\n        <TSHalf Value=\"-2139062017\" />\n        <TSDeltaMouseOver Value=\"5\" />\n        <TSMouseOver Value=\"-2130739072\" />\n        <TSSel Value=\"855605376\" />\n        <TSBPM Value=\"855605376\" />\n        <TSBPMFont Name=\"Verdana\" Size=\"9\" Style=\"1\" />\n        <MiddleDeltaRelease Value=\"1\" />\n        <kHeight Value=\"10\" />\n        <kFont Name=\"Verdana\" Size=\"9\" Style=\"0\" />\n        <kMFont Name=\"Verdana\" Size=\"9\" Style=\"0\" />\n        <kLabelVShift Value=\"-2\" />\n        <kLabelHShift Value=\"0\" />\n        <kLabelHShiftL Value=\"2\" />\n        <kMouseOver Value=\"-16711936\" />\n        <kMouseOverE Value=\"-16711681\" />\n        <kSelected Value=\"-65536\" />\n        <kOpacity Value=\"0.5\" />\n    </VisualSettings>\n</iBMSC>"
+  }
+};

@@ -1,0 +1,17 @@
+import {performance} from 'node:perf_hooks';
+import {writeFile} from 'node:fs/promises';
+import assert from 'node:assert/strict';
+import {parseBMS,serializeBMS,events} from '../src/bms.js';
+import {renderIndex} from '../src/render-index.js';
+const lines=['#BPM 120','#WAV01 benchmark.wav'];
+for(let m=0;m<1000;m++) for(const channel of ['11','12','13','14','15','16','18','19']) lines.push(`#${String(m).padStart(3,'0')}${channel}:${'01'.repeat(16)}`);
+const start=performance.now(), chart=parseBMS(lines.join('\n')), parsed=performance.now();
+const cache=renderIndex(chart), indexed=performance.now();
+assert.equal(cache.all.length,128000);
+let returned=0; for(let i=0;i<1000;i++) returned+=cache.visible(i*3,i*3+8).length;
+const queried=performance.now();
+const saved=serializeBMS(chart), reopened=parseBMS(saved), finished=performance.now();
+assert.equal(events(reopened).length,128000);
+const result={notes:128000,parseMs:parsed-start,indexMs:indexed-parsed,queries:1000,queryMs:queried-indexed,visibleNotes:returned,saveReopenMs:finished-queried,serializedBytes:Buffer.byteLength(saved)};
+await writeFile(new URL('../docs/BENCHMARK.json',import.meta.url),JSON.stringify(result,null,2)+'\n');
+console.log(JSON.stringify(result,null,2));

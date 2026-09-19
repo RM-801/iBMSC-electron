@@ -1,0 +1,956 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src &#x27;self&#x27;; script-src &#x27;self&#x27;; style-src &#x27;self&#x27;; img-src &#x27;self&#x27; data:; media-src &#x27;self&#x27; blob:; connect-src &#x27;self&#x27;"
+    />
+    <title>iBMSC · Node Edition</title>
+    <link rel="stylesheet" href="src/style.css" />
+  </head>
+  <body>
+    <header>
+      <b class="appname">iBMSC</b>
+      <nav>
+        <details class="menu" name="main-menu">
+          <summary>文件</summary>
+          <div>
+            <button data-action="new" data-icon="New" title="新建">新建</button
+            ><button data-action="open" data-icon="Open" title="打开">
+              打开</button
+            ><button data-action="save" data-icon="Save" title="保存">
+              保存</button
+            ><button data-action="saveas" data-icon="SaveAs" title="另存为">
+              另存为</button
+            ><button
+              data-action="projectexport"
+              data-icon="Export"
+              title="导出 .IBMSC"
+            >
+              导出 .IBMSC</button
+            ><button
+              data-action="recover"
+              data-icon="Refresh"
+              title="恢复自动保存"
+            >
+              恢复自动保存
+            </button>
+            <button
+              id="portableexport"
+              data-icon="Export"
+              title="保存移植版工程"
+            >
+              保存移植版工程…
+            </button>
+            <div id="recentfiles" aria-label="最近文件"></div>
+          </div>
+        </details>
+        <details class="menu" name="main-menu">
+          <summary>编辑</summary>
+          <div>
+            <button data-action="undo" data-icon="Undo" title="撤销">
+              撤销</button
+            ><button data-action="redo" data-icon="Redo" title="重做">
+              重做</button
+            ><button data-action="cutnotes" data-icon="Cut" title="剪切">
+              剪切</button
+            ><button data-action="copynotes" data-icon="Copy" title="复制">
+              复制</button
+            ><button data-action="pastenotes" data-icon="Paste" title="粘贴">
+              粘贴</button
+            ><button data-action="deletenotes" data-icon="Remove" title="删除">
+              删除</button
+            ><button
+              data-action="selectall"
+              data-icon="MultiSelect"
+              title="全选"
+            >
+              全选</button
+            ><button
+              data-action="findopen"
+              data-icon="Find"
+              title="查找 / 删除 / 替换"
+            >
+              查找 / 删除 / 替换</button
+            ><button
+              data-action="statistics"
+              data-icon="Statistics"
+              title="统计"
+            >
+              统计
+            </button>
+          </div>
+        </details>
+        <details class="menu" name="main-menu">
+          <summary>选项</summary>
+          <div>
+            <button
+              data-action="errorcheck"
+              data-icon="CheckError"
+              title="错误检查"
+            >
+              错误检查</button
+            ><button
+              data-action="themeimport"
+              data-icon="Theme"
+              title="导入主题"
+            >
+              导入主题
+            </button>
+          </div>
+        </details>
+        <details class="menu" name="main-menu">
+          <summary>转换</summary>
+          <div>
+            <button
+              data-action="convertnotes"
+              data-icon="ConvertNotes"
+              title="转换选中音符"
+            >
+              转换选中音符
+            </button>
+          </div>
+        </details>
+        <details class="menu" name="main-menu">
+          <summary>预览</summary>
+          <div>
+            <button data-action="play" data-icon="PlayB" title="从头播放">
+              从头播放</button
+            ><button
+              data-action="playhere"
+              data-icon="Play"
+              title="从指定小节播放（F6）"
+            >
+              从指定小节播放</button
+            ><button data-action="stop" data-icon="Stop" title="停止（F7）">
+              停止
+            </button>
+          </div>
+        </details>
+        <details class="menu" name="main-menu">
+          <summary>帮助</summary>
+          <div>
+            <button id="about" data-icon="About" title="关于与致谢">
+              关于与致谢
+            </button>
+          </div>
+        </details>
+      </nav>
+      <span class="badge">开发中 · 未验收 · 就近吸附 r4</span>
+    </header>
+    <div hidden>
+      <button id="new" data-icon="New" title="新建">新建</button
+      ><button id="open" data-icon="Open" title="打开谱面">打开谱面</button
+      ><button id="projectexport" data-icon="Export" title="导出 .IBMSC">
+        导出 .IBMSC</button
+      ><button id="saveas" data-icon="SaveAs" title="另存为">另存为</button
+      ><button id="save" class="primary" data-icon="Save" title="保存 BMS">
+        保存 BMS
+      </button>
+    </div>
+    <div class="workspace" id="workspace">
+      <main>
+        <div class="toolbar">
+          <button
+            data-action="new"
+            title="新建"
+            class="iconbutton"
+            data-icon="New"
+          >
+            新建</button
+          ><button
+            data-action="open"
+            title="打开"
+            class="iconbutton"
+            data-icon="Open"
+          >
+            打开</button
+          ><button
+            data-action="save"
+            title="保存"
+            class="iconbutton"
+            data-icon="Save"
+          >
+            保存</button
+          ><span class="toolbar-separator" aria-hidden="true"></span
+          ><button
+            id="cutnotes"
+            title="剪切"
+            class="iconbutton"
+            data-icon="Cut"
+          >
+            剪切</button
+          ><button
+            id="copynotes"
+            title="复制"
+            class="iconbutton"
+            data-icon="Copy"
+          >
+            复制</button
+          ><button
+            id="pastenotes"
+            title="粘贴"
+            class="iconbutton"
+            data-icon="Paste"
+          >
+            粘贴</button
+          ><button
+            id="deletenotes"
+            data-icon="Remove"
+            title="删除"
+            class="iconbutton"
+          >
+            删除</button
+          ><button
+            id="selectall"
+            data-icon="MultiSelect"
+            title="全选"
+            class="iconbutton"
+          >
+            全选</button
+          ><button
+            id="findopen"
+            title="查找 / 替换"
+            class="iconbutton"
+            data-icon="Find"
+          >
+            查找 / 替换</button
+          ><button
+            id="statistics"
+            title="统计"
+            class="iconbutton"
+            data-icon="Statistics"
+          >
+            统计</button
+          ><span class="toolbar-separator" aria-hidden="true"></span
+          ><button
+            id="errorcheck"
+            title="错误检查"
+            class="iconbutton"
+            data-icon="CheckError"
+          >
+            错误检查</button
+          ><span class="toolbar-separator" aria-hidden="true"></span
+          ><button id="undo" title="撤销" class="iconbutton" data-icon="Undo">
+            ↶ 撤销</button
+          ><button id="redo" title="重做" class="iconbutton" data-icon="Redo">
+            ↷ 重做</button
+          ><select id="tool" aria-label="编辑工具" hidden>
+            <option value="select">选择工具</option>
+            <option value="write">写入工具</option>
+            <option value="time">时间选择工具</option></select
+          ><span class="toolbar-separator" aria-hidden="true"></span
+          ><button
+            id="tool-time"
+            class="iconbutton"
+            data-icon="TimeSelection"
+            title="时间选择工具（F1）"
+            aria-pressed="false"
+          >
+            时间选择工具</button
+          ><button
+            id="tool-select"
+            class="iconbutton"
+            data-icon="Select"
+            title="选择工具（F2）"
+            aria-pressed="true"
+          >
+            选择工具</button
+          ><button
+            id="tool-write"
+            class="iconbutton"
+            data-icon="Pen"
+            title="写入工具（F3）"
+            aria-pressed="false"
+          >
+            写入工具</button
+          ><span class="toolbar-separator" aria-hidden="true"></span
+          ><button
+            id="play"
+            title="播放（F5）"
+            class="iconbutton"
+            data-icon="PlayB"
+          >
+            ▶ 播放</button
+          ><button
+            id="playhere"
+            title="从指定小节播放（F6）"
+            class="iconbutton"
+            data-icon="Play"
+          >
+            从指定小节播放</button
+          ><button
+            id="stop"
+            title="停止（F7）"
+            class="iconbutton"
+            data-icon="Stop"
+          >
+            ■ 停止
+          </button>
+          <button
+            id="toggle-options"
+            title="显示 / 隐藏操作面板"
+            aria-expanded="true"
+            aria-controls="options-panel"
+            data-icon="GeneralOptions"
+            class="iconbutton"
+          >
+            操作面板
+          </button>
+        </div>
+        <div id="editorpanes">
+          <section class="chartpane" id="pane-left" hidden>
+            <div class="headerclip">
+              <div class="laneheads" id="heads-left"></div>
+            </div>
+            <div class="viewport" id="view-left">
+              <div class="scrollspace" id="space-left">
+                <canvas id="chart-left"></canvas>
+              </div>
+            </div>
+          </section>
+          <section class="chartpane" id="pane-main">
+            <div id="headerclip">
+              <div class="laneheads" id="laneheads"></div>
+            </div>
+            <div id="viewport">
+              <div id="scrollspace">
+                <canvas id="chart" width="760" height="960"></canvas>
+              </div>
+            </div>
+          </section>
+          <section class="chartpane" id="pane-right" hidden>
+            <div class="headerclip">
+              <div class="laneheads" id="heads-right"></div>
+            </div>
+            <div class="viewport" id="view-right">
+              <div class="scrollspace" id="space-right">
+                <canvas id="chart-right"></canvas>
+              </div>
+            </div>
+          </section>
+        </div>
+      </main>
+      <div
+        id="options-resizer"
+        role="separator"
+        aria-label="调整操作面板宽度"
+        aria-orientation="vertical"
+        tabindex="0"
+      ></div>
+      <aside class="right" id="options-panel">
+        <details class="opgroup" open>
+          <summary>头信息</summary>
+          <div class="opbody">
+            <h2 id="project" class="document-name">未命名</h2>
+            <label>标题<input id="title" /></label
+            ><label>作者<input id="artist" /></label>
+            <div class="twocol">
+              <label
+                >BPM<input id="bpm" type="number" min="1" step="any" /></label
+              ><label>等级<input id="level" /></label>
+            </div>
+            <label>类型<input id="genre" /></label>
+            <details>
+              <summary>其他头信息</summary>
+              <div id="extraheaders"></div>
+            </details>
+          </div>
+        </details>
+        <details class="opgroup" open>
+          <summary>网格 / 编辑</summary>
+          <div class="opbody">
+            <label
+              >翻页步长<input
+                id="pageunits"
+                type="number"
+                min="1"
+                max="100000"
+                value="384" /></label
+            ><label
+              >备用网格<input
+                id="slashgrid"
+                type="number"
+                min="1"
+                max="65536"
+                value="192"
+            /></label>
+            <label
+              >网格<input
+                id="grid"
+                aria-label="网格分割"
+                type="number"
+                min="1"
+                max="65536"
+                value="16" /></label
+            ><label
+              >缩放<input
+                id="zoom"
+                type="number"
+                min="0.25"
+                max="99"
+                step="0.25"
+                value="4"
+                aria-label="纵向缩放"
+            /></label>
+            <div class="checks">
+              <label
+                ><input id="snap" type="checkbox" checked />吸附网格 (G)</label
+              ><label
+                ><input id="verticaloff" type="checkbox" />禁止纵向移动</label
+              >
+            </div>
+            <details class="panel-more">
+              <summary>轨道与显示选项</summary>
+              <div class="opbody">
+                <div class="checks">
+                  <label
+                    ><input
+                      id="showgrid"
+                      type="checkbox"
+                      checked
+                    />显示网格</label
+                  >
+                  <label
+                    ><input
+                      id="showfilename"
+                      type="checkbox"
+                    />显示音源文件名</label
+                  >
+                  <label><input id="split-left" type="checkbox" />左分屏</label>
+                  <label
+                    ><input id="split-right" type="checkbox" />右分屏</label
+                  >
+                  <label
+                    ><input
+                      id="scrolllock"
+                      type="checkbox"
+                      checked
+                    />纵向滚动同步</label
+                  >
+                  <label
+                    ><input
+                      id="followplay"
+                      type="checkbox"
+                      checked
+                    />播放跟随</label
+                  >
+                  <label
+                    ><input id="previewclick" type="checkbox" />点击试听</label
+                  >
+                  <label><input id="show2p" type="checkbox" />显示 2P</label>
+                  <label
+                    ><input id="showbpm" type="checkbox" checked />BPM</label
+                  >
+                  <label
+                    ><input id="showstop" type="checkbox" checked />STOP</label
+                  >
+                  <label
+                    ><input id="showbga" type="checkbox" />BGA / Layer /
+                    Poor</label
+                  >
+                </div>
+              </div>
+            </details>
+            <label
+              >BGM 列数<input
+                title="最少显示列数；按窗口宽度及谱面内容自动补列"
+                id="bgmcount"
+                type="number"
+                min="1"
+                max="999"
+                value="15" /></label
+            ><label
+              >BPM / STOP 数值<input
+                id="eventvalue"
+                type="number"
+                min="0.0001"
+                max="65535.9999"
+                step="any"
+                value="120" /></label
+            ><label
+              >长音符输入方式<select id="lnstyle">
+                <option value="nt">NT：拖动写入 / 整体移动</option>
+                <option value="bmse">BMSE：分别编辑端点</option>
+              </select></label
+            ><label
+              >输入类型<select id="notetype">
+                <option value="normal">普通音符 / 事件</option>
+                <option value="long">长音符端点</option>
+              </select></label
+            ><label class="inlinecheck"
+              ><input id="hiddennote" type="checkbox" />隐藏音符</label
+            >
+          </div>
+        </details>
+        <details class="opgroup">
+          <summary>波形</summary>
+          <div class="opbody">
+            <button id="waveload" data-icon="Add" title="加载波形">
+              加载波形</button
+            ><button id="waveuse" data-icon="Import" title="使用当前音源">
+              使用当前音源</button
+            ><button id="waveclear" data-icon="Remove" title="清除">
+              清除
+            </button>
+            <small id="overlayname">未加载叠加波形</small>
+            <label class="inlinecheck"
+              ><input type="checkbox" id="wavelock" checked />锁定首个 BGM
+              起点</label
+            >
+            <label
+              >起点位置<input
+                id="waveposition"
+                type="number"
+                min="0"
+                max="192000"
+                value="0"
+            /></label>
+            <label
+              >水平位置<input
+                id="waveleft"
+                type="number"
+                min="0"
+                max="800"
+                value="50"
+            /></label>
+            <label
+              >宽度<input
+                id="wavewidth"
+                type="number"
+                min="0"
+                max="1000"
+                value="100"
+            /></label>
+            <label
+              >精度<input
+                id="waveprecision"
+                type="number"
+                min="0"
+                max="50"
+                value="1"
+            /></label>
+            <label
+              >不透明度<input
+                id="waveopacity"
+                type="number"
+                min="0"
+                max="255"
+                value="80"
+            /></label>
+            <input id="wavefile" type="file" accept=".wav,.ogg,.mp3" hidden />
+            <canvas id="waveform" width="180" height="70"></canvas
+            ><small id="waveinfo">选择音源查看波形</small>
+          </div>
+        </details>
+        <details class="opgroup" open>
+          <summary>WAV</summary>
+          <div class="opbody">
+            <button
+              id="audiofiles"
+              data-icon="PlayerBrowse"
+              title="加载音源文件"
+            >
+              加载音源文件</button
+            ><small id="soundhelp"
+              >选择谱面使用的 WAV / OGG / MP3，支持多选。</small
+            ><small id="soundstatus"></small>
+            <details id="sounderrors" hidden>
+              <summary>未加载的音源</summary>
+              <pre id="sounderrorlist" class="wrapped-report"></pre>
+            </details>
+            <div class="panel-actions">
+              <button id="wavbrowse" data-icon="PlayerBrowse" title="浏览音源">
+                浏览音源</button
+              ><button id="wavup" data-icon="Up" title="上移">上移</button
+              ><button id="wavdown" data-icon="Down" title="下移">下移</button>
+              <button id="wavremove" data-icon="Remove" title="移除定义">
+                移除定义
+              </button>
+            </div>
+            <select
+              id="samples"
+              multiple
+              size="10"
+              aria-label="WAV 编号列表"
+            ></select>
+            <details class="panel-more">
+              <summary>音源编号与资源定义</summary>
+              <div class="opbody">
+                <label class="inlinecheck"
+                  ><input
+                    id="wavmulti"
+                    type="checkbox"
+                    checked
+                  />多选音源</label
+                >
+                <label
+                  >当前 WAV 编号<input
+                    id="sample"
+                    value="01"
+                    maxlength="2" /></label
+                ><small>单击音源选择 · 双击试听</small
+                ><label
+                  >移动 / 交换到编号<input
+                    id="wavtarget"
+                    value="02"
+                    maxlength="2" /></label
+                ><label class="inlinecheck"
+                  ><input
+                    id="wavsync"
+                    type="checkbox"
+                    checked
+                  />同步音符编号</label
+                ><button
+                  id="wavrename"
+                  data-icon="ModifyLabel"
+                  title="移动 / 交换"
+                >
+                  移动 / 交换</button
+                ><label
+                  >资源定义<select id="definitiontype">
+                    <option>WAV</option>
+                    <option>BMP</option>
+                    <option>BPM</option>
+                    <option>STOP</option>
+                  </select></label
+                ><label
+                  >编号<input
+                    id="definitionid"
+                    maxlength="2"
+                    value="01" /></label
+                ><label>文件名 / 数值<input id="definitionvalue" /></label
+                ><button id="definitionapply" data-icon="Pen" title="写入定义">
+                  写入定义
+                </button>
+              </div>
+            </details>
+          </div>
+        </details>
+        <details class="opgroup">
+          <summary>小节</summary>
+          <div class="opbody">
+            <select
+              id="measurelist"
+              multiple
+              size="8"
+              aria-label="小节长度列表"
+            ></select>
+            <label
+              >小节<input
+                id="measure"
+                type="number"
+                min="0"
+                max="999"
+                value="0"
+            /></label>
+            <div class="twocol">
+              <label
+                >分子<input
+                  id="beatnumerator"
+                  type="number"
+                  min="1"
+                  step="1"
+                  value="4"
+              /></label>
+              <label
+                >分母<input
+                  id="beatdenominator"
+                  type="number"
+                  min="1"
+                  step="1"
+                  value="4"
+              /></label>
+            </div>
+            <button id="applysignature">应用分子 / 分母</button>
+            <label
+              >长度比<input
+                id="ratio"
+                type="number"
+                min="0.000001"
+                step="any"
+                value="1" /></label
+            ><select id="beatmode" aria-label="变拍模式">
+              <option value="absolute">保持绝对位置</option>
+              <option value="measure">保持小节内位置</option>
+              <option value="cut">保持位置并截断溢出</option>
+              <option value="scale">缩放至小节长度</option></select
+            ><button id="applyratio" data-icon="ModifyLabel" title="设置变拍">
+              应用长度比</button
+            ><button id="jump" data-icon="Play" title="跳转">跳转</button
+            ><button id="insertmeasure" data-icon="Add" title="插入小节">
+              插入小节</button
+            ><button id="removemeasure" data-icon="Remove" title="删除小节">
+              删除小节
+            </button>
+            <p id="measurefeedback" role="status" aria-live="polite"></p>
+            <details class="panel-more">
+              <summary>小节范围操作</summary>
+              <div class="opbody">
+                <div class="twocol">
+                  <label
+                    >从<input
+                      id="rangefrom"
+                      type="number"
+                      min="0"
+                      max="999"
+                      value="0" /></label
+                  ><label
+                    >至<input
+                      id="rangeto"
+                      type="number"
+                      min="0"
+                      max="999"
+                      value="0"
+                  /></label>
+                </div>
+                <button
+                  id="applyrangeratio"
+                  data-icon="ModifyLabel"
+                  title="将长度比应用到范围内所有小节"
+                >
+                  范围变拍
+                </button>
+                <div class="rangebuttons">
+                  <button id="copyrange" data-icon="Copy" title="复制">
+                    复制</button
+                  ><button
+                    id="pasterange"
+                    data-icon="Paste"
+                    title="粘贴到指定小节"
+                  >
+                    粘贴到指定小节</button
+                  ><button id="mirrorrange" data-icon="Mirror" title="七键镜像">
+                    七键镜像</button
+                  ><button id="deleterange" data-icon="Remove" title="清除事件">
+                    清除事件
+                  </button>
+                </div>
+              </div>
+            </details>
+          </div>
+        </details>
+        <details class="opgroup">
+          <summary>扩展 / BMS 文本</summary>
+          <div class="opbody">
+            <button
+              id="sourceopen"
+              data-icon="NewFromCode"
+              title="编辑 BMS 文本"
+            >
+              编辑 BMS 文本
+            </button>
+          </div>
+        </details>
+        <details class="opgroup">
+          <summary>其他设置</summary>
+          <div class="opbody">
+            <details>
+              <summary>语言 / 配置</summary>
+              <select id="language">
+                <option value="">选择语言</option></select
+              ><button
+                id="languageimport"
+                data-icon="Language"
+                title="导入语言 XML"
+              >
+                导入语言 XML</button
+              ><button
+                id="settingsimport"
+                data-icon="Import2"
+                title="导入设置 XML"
+              >
+                导入设置 XML</button
+              ><button
+                id="settingsexport"
+                data-icon="Export2"
+                title="导出设置 XML"
+              >
+                导出设置 XML</button
+              ><button id="themeexport" data-icon="Theme" title="导出主题 XML">
+                导出主题 XML
+              </button>
+            </details>
+            <details>
+              <summary>外部播放器设置</summary>
+              <label>播放器<select id="playerlist"></select></label
+              ><button id="playeradd" data-icon="Add" title="添加播放器">
+                添加播放器</button
+              ><button id="playerremove" data-icon="Remove" title="移除播放器">
+                移除播放器</button
+              ><button
+                id="playerchoose"
+                data-icon="PlayerBrowse"
+                title="选择程序"
+              >
+                选择程序</button
+              ><span id="playername">尚未选择</span
+              ><label
+                >从头播放参数<input
+                  id="playerbegin"
+                  value='-P -N0 "&lt;filename&gt;"' /></label
+              ><label
+                >从此小节播放参数<input
+                  id="playerhere"
+                  value='-P -N&lt;measure&gt; "&lt;filename&gt;"' /></label
+              ><label>停止参数<input id="playerstop" value="-S" /></label
+              ><button id="externalbegin" data-icon="PlayB" title="从头播放">
+                从头播放</button
+              ><button
+                id="externalhere"
+                data-icon="Play"
+                title="从指定小节播放（F6）"
+              >
+                从指定小节播放</button
+              ><button id="externalstop" data-icon="Stop" title="停止（F7）">
+                停止
+              </button>
+            </details>
+            <label
+              >主题<select id="theme">
+                <option value="">默认</option>
+              </select></label
+            ><button
+              id="themeimport"
+              data-icon="Theme"
+              title="导入原版主题 XML"
+            >
+              导入原版主题 XML</button
+            ><label
+              >打开编码<select id="inputencoding">
+                <option value="auto">自动（UTF-8 / Shift-JIS）</option>
+                <option value="utf8">UTF-8</option>
+                <option value="shift_jis">Shift-JIS</option>
+                <option value="gbk">GBK / GB2312</option>
+              </select></label
+            ><label
+              >保存格式<select id="saveformat">
+                <option value="bms">BMS 谱面</option>
+                <option value="ibmsc">原版 iBMSC 工程（BASE36）</option>
+                <option value="ibmscx">
+                  移植版工程（保留 BASE62 / 暂存长条）
+                </option>
+              </select></label
+            ><label
+              >保存编码<select id="encoding">
+                <option value="utf8">UTF-8</option>
+                <option value="shift_jis">Shift-JIS（桌面版）</option>
+                <option value="gbk">GBK（桌面版）</option>
+              </select></label
+            ><label class="inlinecheck"
+              ><input
+                id="autosave"
+                type="checkbox"
+                checked
+              />每分钟自动保存恢复副本</label
+            ><button id="recover" data-icon="Refresh" title="恢复自动保存">
+              恢复自动保存
+            </button>
+            <details>
+              <summary>BPM 计算</summary>
+              <label
+                >拍数<input
+                  id="bpmbeats"
+                  type="number"
+                  value="4"
+                  min="0.001"
+                  step="any" /></label
+              ><label
+                >时长（秒）<input
+                  id="bpmseconds"
+                  type="number"
+                  value="2"
+                  min="0.001"
+                  step="any" /></label
+              ><button id="bpmcalculate" data-icon="Statistics" title="计算">
+                计算</button
+              ><button id="bpmtap" data-icon="NTInput" title="Tap">Tap</button
+              ><output id="bpmresult"></output>
+            </details>
+            <select id="conversion">
+              <option value="long">转为长音符</option>
+              <option value="short">转为短音符</option>
+              <option value="hidden">转为隐藏音符</option>
+              <option value="visible">转为可见音符</option>
+              <option value="value">修改编号</option>
+              <option value="mirror">镜像</option></select
+            ><button
+              id="convertnotes"
+              data-icon="ConvertNotes"
+              title="转换选中音符"
+            >
+              转换选中音符
+            </button>
+          </div>
+        </details>
+      </aside>
+    </div>
+    <footer>
+      <span id="status">就绪</span><span id="selection">未选择音符</span
+      ><span id="count"></span>
+      <p id="playstatus" class="help">尚未播放</p>
+    </footer>
+    <dialog id="smdialog">
+      <h2>导入 SM 难度</h2>
+      <select id="smdifficulty"></select
+      ><button id="smapply" data-icon="Import2" title="导入">导入</button
+      ><button id="smcancel">取消</button>
+    </dialog>
+    <dialog id="reportdialog">
+      <h2 id="reporttitle"></h2>
+      <pre id="reporttext"></pre>
+      <table id="statstable" hidden aria-label="谱面统计"></table>
+      <button id="reportclose">关闭</button>
+    </dialog>
+    <dialog id="finddialog">
+      <h2>查找 / 删除 / 替换</h2>
+      <label>编号（空白匹配全部）<input id="findvalue" maxlength="2" /></label
+      ><label
+        >通道（空白匹配全部）<input id="findchannel" maxlength="2" /></label
+      ><label>替换为<input id="replacevalue" maxlength="2" /></label
+      ><button id="findnext" data-icon="Find" title="下一个">下一个</button
+      ><button id="replaceall" data-icon="ModifyLabel" title="全部替换">
+        全部替换</button
+      ><button id="deletefound" data-icon="Remove" title="删除匹配">
+        删除匹配</button
+      ><button id="findclose">关闭</button>
+    </dialog>
+    <dialog id="sourcedialog">
+      <h2>BMS 文本</h2>
+      <textarea id="source" spellcheck="false" aria-label="BMS 文本"></textarea>
+      <p id="sourceerror"></p>
+      <button id="sourceapply" data-icon="Pen" title="应用修改">应用修改</button
+      ><button id="sourcecancel">取消</button>
+    </dialog>
+    <input id="languagefile" type="file" accept=".xml" hidden /><input
+      id="settingsfile"
+      type="file"
+      accept=".xml"
+      hidden
+    /><input id="themefile" type="file" accept=".xml" hidden /><input
+      id="file"
+      type="file"
+      accept=".bms,.bme,.bml,.pms,.ibmsc,.ibmscx,.sm"
+      hidden
+    /><input
+      id="sounds"
+      type="file"
+      accept="audio/*,.ogg,.wav"
+      multiple
+      hidden
+    />
+    <script type="module" src="src/app.js"></script>
+    <dialog id="noteeditdialog" aria-labelledby="noteedittitle">
+      <h2 id="noteedittitle">修改音符数值</h2>
+      <label
+        ><span id="noteeditlabel">音符编号（01–ZZ）</span
+        ><input id="noteeditvalue" autocomplete="off"
+      /></label>
+      <p id="noteediterror" role="alert"></p>
+      <button id="noteeditapply" data-icon="ModifyLabel">应用</button>
+      <button id="noteeditcancel">取消</button>
+    </dialog>
+  </body>
+</html>

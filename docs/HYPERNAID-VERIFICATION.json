@@ -1,0 +1,288 @@
+{
+  "version": 1,
+  "chart": "hypernaid.bms",
+  "sha256": "c8bf62aedb05696659895741f56e35d07b88591bcfe86e62316d325f48cd8ffd",
+  "title": "Hypernaid",
+  "player": "1",
+  "bpm": "150",
+  "events": 2430,
+  "lastMeasure": 80,
+  "longPairs": 15,
+  "statistics": {
+    "rows": [
+      "BPM",
+      "STOP",
+      "A1–A8",
+      "D1–D8",
+      "BGM",
+      "总计"
+    ],
+    "columns": [
+      "短音符",
+      "长音符",
+      "LNOBJ",
+      "隐藏",
+      "错误",
+      "总数"
+    ],
+    "data": [
+      [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        1551,
+        30,
+        0,
+        0,
+        0,
+        1581
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        847,
+        0,
+        0,
+        0,
+        0,
+        847
+      ],
+      [
+        2400,
+        30,
+        0,
+        0,
+        0,
+        2430
+      ]
+    ],
+    "showD": false,
+    "dLanes": [
+      {
+        "name": "D1",
+        "counts": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "name": "D2",
+        "counts": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "name": "D3",
+        "counts": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "name": "D4",
+        "counts": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "name": "D5",
+        "counts": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "name": "D6",
+        "counts": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "name": "D7",
+        "counts": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "name": "D8",
+        "counts": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    ],
+    "aLanes": [
+      {
+        "name": "A1",
+        "counts": [
+          208,
+          12,
+          0,
+          0,
+          0,
+          220
+        ]
+      },
+      {
+        "name": "A2",
+        "counts": [
+          217,
+          4,
+          0,
+          0,
+          0,
+          221
+        ]
+      },
+      {
+        "name": "A3",
+        "counts": [
+          163,
+          2,
+          0,
+          0,
+          0,
+          165
+        ]
+      },
+      {
+        "name": "A4",
+        "counts": [
+          197,
+          2,
+          0,
+          0,
+          0,
+          199
+        ]
+      },
+      {
+        "name": "A5",
+        "counts": [
+          193,
+          2,
+          0,
+          0,
+          0,
+          195
+        ]
+      },
+      {
+        "name": "A6",
+        "counts": [
+          211,
+          2,
+          0,
+          0,
+          0,
+          213
+        ]
+      },
+      {
+        "name": "A7",
+        "counts": [
+          179,
+          2,
+          0,
+          0,
+          0,
+          181
+        ]
+      },
+      {
+        "name": "A8",
+        "counts": [
+          183,
+          4,
+          0,
+          0,
+          0,
+          187
+        ]
+      }
+    ]
+  },
+  "diagnostics": [],
+  "roundtrips": {
+    "bms": {
+      "passed": true
+    },
+    "ibmsc": {
+      "passed": true
+    },
+    "ibmscx": {
+      "passed": true
+    }
+  },
+  "assets": {
+    "checked": 1027,
+    "readable": 1027,
+    "signatures": {
+      "RIFF": 1027
+    },
+    "failures": []
+  },
+  "playback": {
+    "events": 2413,
+    "lastStartSeconds": 127.99999999999868
+  },
+  "limitations": [
+    "File and timing validation only; no actual audio audition or graphical interaction.",
+    "The ibmsc check uses an export produced by this port, not an original application fixture."
+  ]
+}
