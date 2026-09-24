@@ -56,8 +56,8 @@ export function putCaptured(
       hidden: p.hidden,
     });
 }
-export function mirrorCaptured(chart, notes) {
-  const maps = {
+export function mirrorCaptured(chart, notes, keyColumns = null) {
+  const maps = keyColumns ? Object.fromEntries(keyColumns.map((id, i) => [id, keyColumns.at(-1 - i)])) : {
     5: 11,
     6: 10,
     7: 9,

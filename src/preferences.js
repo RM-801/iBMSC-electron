@@ -1,5 +1,8 @@
 export const preferenceFields = {
   zoom: ["Grid", "gxHeight", "decimal", 0.25, 99],
+  widthzoom: ["Grid", "gxWidth", "decimal", 0.25, 99],
+  subgrid: ["Grid", "gSub", "number", 1, 65536],
+  showsubgrid: ["Grid", "gShowS", "boolean"],
   wavelock: ["WaveForm", "wLock", "boolean"],
   waveposition: ["WaveForm", "wPosition", "number", 0, 192000],
   waveleft: ["WaveForm", "wLeft", "number", 0, 800],

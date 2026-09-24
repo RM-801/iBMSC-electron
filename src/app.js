@@ -1,4 +1,7 @@
+import { positionStatus, statusNumber } from "./position-status.js";
 import { defaultColumns } from "./default-columns.js";
+import { gridOffsets } from "./grid-lines.js";
+import { isPomuTheme, pomuColumns, pomuChannels, pomuStatisticsRows, shiftVisibleNotes } from "./key-layout.js";
 import { readPlayerSettings, writePlayerSettings } from "./player-settings.js";
 import { remapClipboardNotes, remapClipboardRows } from "./clipboard-base.js";
 import { writePortableProject, readPortableProject, validateProjectChart } from "./portable-project.js";
@@ -18,7 +21,7 @@ import {
 } from "./note-edit.js";
 import { classifyDrop } from "./drop-files.js";
 import { waveformClock, waveformSample } from "./wave-overlay.js";
-import { columnStyle, paintNote, noteColor } from "./note-render.js";
+import { columnStyle, paintNote, paintNoteLabel, noteColor } from "./note-render.js";
 import { decodeXML } from "./text-encoding.js";
 import { locales } from "./locales.js";
 import {
@@ -115,6 +118,24 @@ let wavSelection = new Set(["01"]),
   wavListSignature = null;
 let renderCache = renderIndex(chart);
 const history = new History(chart);
+let expansionEdit = null;
+function finishExpansionEdit() {
+  if (!expansionEdit) return;
+  if (expansionEdit.target === chart) history.commit(expansionEdit.before, chart);
+  expansionEdit = null;
+  dirty = history.isDirty(chart);
+  $("undo").disabled = !history.canUndo;
+  $("redo").disabled = !history.canRedo;
+}
+$("expansion").oninput = () => {
+  if (expansionEdit?.target !== chart)
+    expansionEdit = { target: chart, before: structuredClone(chart) };
+  chart.raw = $("expansion").value.split(/\r\n|\n|\r/);
+  dirty = history.isDirty(chart);
+  document.title = (dirty ? "● " : "") + $("project").textContent + " · iBMSC";
+  $("undo").disabled = false;
+};
+$("expansion").onchange = $("expansion").onblur = finishExpansionEdit;
 let activeChannels = [
   "01",
   "03",
@@ -134,6 +155,8 @@ let columns = [],
   noteClipboard = [],
   pasteTarget = null,
   writePointer = null,
+  statusPointer = null,
+  timeStatus = { start: 0, length: 0 },
   box = null,
   currentTheme = null,
   pendingSM = null;
@@ -165,9 +188,10 @@ function stop() {
     } catch {}
   });
   sources = [];
-  $("playstatus").textContent = "已停止";
+  $("playstatus").textContent = "";
 }
 function mutate(fn) {
+  finishExpansionEdit();
   const before = structuredClone(chart);
   try {
     stop();
@@ -185,6 +209,8 @@ function mutate(fn) {
   }
 }
 function refresh() {
+  const expansion = chart.raw.join("\n");
+  if ($("expansion").value !== expansion) $("expansion").value = expansion;
   if (!$("measurelist").children.length) {
     for (let m = 0; m < 1000; m++) {
       const option = document.createElement("option");
@@ -233,7 +259,7 @@ function refresh() {
   document.title = (dirty ? "● " : "") + $("project").textContent + " · iBMSC";
   $("undo").disabled = !history.canUndo;
   $("redo").disabled = !history.canRedo;
-  $("count").textContent = events(chart).length + " 个事件";
+  $("count").textContent = String(renderCache.all.length);
   refreshWAVList();
   $("show2p").checked = showsSecondPlayer(chart);
   rebuildColumns();
@@ -254,6 +280,7 @@ function setScrollExtent(endBeat) {
       0,
       Math.min(height - pane.view.clientHeight, top),
     );
+    pane.lastScrollTop = pane.view.scrollTop;
   }
 }
 function refreshWAVList() {
@@ -289,10 +316,12 @@ $("samples").onchange = () => {
     drawWaveform(chart.resources.WAV[id]);
   }
 };
-$("samples").ondblclick = () => {
+$("samples").onclick = () => {
+  stop();
   const name = chart.resources.WAV[$("sample").value];
-  if (name) preview(name);
+  if ($("previewclick").checked && name) preview(name);
 };
+$("samples").ondblclick = () => browseWAV(true);
 $("samples").onkeydown = (e) => {
   if (e.key === "Delete" || e.key === "Backspace") {
     e.preventDefault();
@@ -320,16 +349,25 @@ for (const [id, direction] of [
     }
   };
 function resetBGMColumns() {
+  statusPointer = null;
+  timeStatus = { start: 0, length: 0 };
+  for (const key of ["column", "note", "measure", "grid", "reduced", "measurePosition", "absolute", "length", "hidden"])
+    $("status-" + key).textContent = "";
   $("bgmcount").value = Math.max(15, maxBGM(chart));
 }
 function rebuildColumns() {
+  const pomu = isPomuTheme(currentTheme);
+  $("secondplayer-option").hidden = pomu;
+  $("show2p").disabled = pomu;
+  $("show2p").checked = !pomu && showsSecondPlayer(chart);
+  if ($("header-player-label")) $("header-player-label").hidden = pomu;
   const bgm = Math.max(
     Math.min(999, Math.max(1, Number($("bgmcount").value) || 15)),
     maxBGM(chart),
   );
   $("bgmcount").value = bgm;
   columns = originalColumns({
-    double: $("show2p").checked,
+    double: pomu || $("show2p").checked,
     bpm: $("showbpm").checked,
     stop: $("showstop").checked,
     bga: $("showbga").checked,
@@ -350,6 +388,13 @@ function rebuildColumns() {
       left += col.width;
     }
   }
+  let columnLeft = 0;
+  columns = columns.filter(col => col.width > 0);
+  for (const col of columns) {
+    col.width *= Number($("widthzoom").value) || 1;
+    col.left = columnLeft;
+    columnLeft += col.width;
+  }
   columns = fillBGMColumns(columns, Math.max(0,
     ...panes.filter(p => !p.panel.hidden).map(p => p.view.clientWidth)));
   contentWidth = columns.at(-1).left + columns.at(-1).width;
@@ -358,7 +403,8 @@ function rebuildColumns() {
     const heads = pane.heads;
     heads.replaceChildren();
     heads.style.font = visualFont(currentTheme, "ColumnTitleFont", "10px Tahoma");
-    heads.style.color = visualColor(currentTheme, "ColumnTitle", "#111");
+    heads.style.color = visualColor(currentTheme, "ColumnTitle", "#ddd");
+    heads.style.backgroundColor = visualColor(currentTheme, "Bg", "#000");
     heads.style.width = contentWidth + "px";
     heads.style.gridTemplateColumns = columns
       .map((c) => c.width + "px")
@@ -366,6 +412,7 @@ function rebuildColumns() {
     for (const col of columns) {
       const b = document.createElement("b");
       b.textContent = col.title;
+      b.style.backgroundColor = col.theme ? argb(col.theme.BG) : "transparent";
       heads.append(b);
     }
   }
@@ -378,6 +425,7 @@ function y(beat) {
 }
 function draw() {
   for (const pane of panes) if (!pane.panel.hidden) drawPane(pane);
+  refreshPositionStatus();
 }
 function drawPane(pane) {
   const view = pane.view,
@@ -430,20 +478,22 @@ function drawPane(pane) {
     const bottom = y(starts[m]),
       upper = y(starts[m + 1]);
     if (bottom < top || upper > top + h) continue;
-    const grid = Math.max(1, Math.min(65536, Number($("grid").value) || 16)),
-      step = 4 / grid,
-      n = Math.ceil((starts[m + 1] - starts[m]) / step),
-      stride = Math.max(1, Math.ceil(n / 512));
-    for (let j = 0; j < n; j += stride) {
-      const yy = y(starts[m] + step * j);
-      if (!$("showgrid").checked && j !== 0) continue;
-      ctx.strokeStyle =
-        j === 0 ? visualColor(currentTheme, "MLine", "#808080") : j % (grid / 4) === 0 ? visualColor(currentTheme, "Sub", "#404040") : visualColor(currentTheme, "Grid", "#222");
+    const line = (offset, color) => {
+      const yy = y(starts[m] + offset);
+      ctx.strokeStyle = color;
       ctx.beginPath();
-      ctx.moveTo(50, yy);
+      ctx.moveTo(0, yy);
       ctx.lineTo(contentWidth, yy);
       ctx.stroke();
-    }
+    };
+    for (const [id, flag, themeKey, fallback] of [
+      ["grid", "showgrid", "Grid", "#222"],
+      ["subgrid", "showsubgrid", "Sub", "#404040"],
+    ])
+      if ($(flag).checked)
+        for (const offset of gridOffsets(starts[m + 1] - starts[m], $(id).value))
+          line(offset, visualColor(currentTheme, themeKey, fallback));
+    line(0, visualColor(currentTheme, "MLine", "#808080"));
     ctx.fillStyle = "#ddd";
     ctx.fillText(String(m).padStart(3, "0"), 10, bottom - 5);
   }
@@ -586,6 +636,51 @@ function location(e) {
   );
   return position && { ...position, lane };
 }
+function rememberStatusPointer(e) {
+  statusPointer = { currentTarget: e.currentTarget, clientX: e.clientX, clientY: e.clientY };
+  status("");
+}
+function refreshPositionStatus() {
+  const time = $("tool").value === "time";
+  $("positionstatus").hidden = time;
+  $("timestatus").hidden = !time;
+  if (time) {
+    $("status-time-start").textContent = statusNumber(timeStatus.start * 48);
+    $("status-time-length").textContent = statusNumber(timeStatus.length * 48);
+    $("status-time-half").textContent = statusNumber(timeStatus.length * 24);
+    return;
+  }
+  if (!statusPointer || starts.length < 2) return;
+  const p = location(statusPointer);
+  if (!p) return;
+  const writing = $("tool").value === "write";
+  let note = writing ? null : hit(p);
+  let length = "", hidden = "";
+  if (note) {
+    const pair = renderCache.pairs.find(pair => pair.some(n => eventId(n) === eventId(note)));
+    if ($("lnstyle").value === "nt") {
+      if (pair) note = pair[0];
+      length = "长度 = " + statusNumber(pair ? (pair[1].beat - pair[0].beat) * 48 : 0);
+    } else if (note.bgmLong || /^[5678]/.test(note.channel)) length = "长音符";
+    if (/^[3478]/.test(note.channel)) hidden = "隐藏";
+  } else if (writing) {
+    if (drag?.ntwrite && drag.preview) {
+      const notes = drag.preview.notes;
+      length = "长度 = " + statusNumber((notes.at(-1).beat - notes[0].beat) * 48);
+    } else if ($("notetype").value === "long") length = "长音符";
+    if ($("hiddennote").checked) hidden = "隐藏";
+  }
+  const beat = note ? note.beat : !writing && !$("snap").checked ? p.beat : snappedBeat(p);
+  const values = positionStatus(starts, beat, Number($("grid").value) || 16);
+  if (!values) return;
+  const col = columns[note ? laneOf(note) : p.lane];
+  $("status-column").textContent = col?.title || "";
+  $("status-note").textContent = note ? String(numericValue(chart, note))
+    : writing ? (col.id <= 2 ? $("eventvalue").value : $("sample").value) : "";
+  for (const [key, value] of Object.entries(values)) $("status-" + key).textContent = value;
+  $("status-length").textContent = length;
+  $("status-hidden").textContent = hidden;
+}
 function place(p, value) {
   const col = columns[p.lane];
   writeColumn(
@@ -620,15 +715,13 @@ canvas.onpointerdown = (e) => {
   if (e.button !== 0) return;
   const p = location(e);
   if (!p) return;
+  rememberStatusPointer(e);
+  refreshPositionStatus();
   keyboardPane = panes.find(pane => pane.canvas === e.currentTarget);
   const found = hit(p);
   if ($("tool").value === "write") {
     writePointer = { currentTarget: e.currentTarget, clientX: e.clientX, clientY: e.clientY };
-    const pane = panes.find(pane => pane.canvas === e.currentTarget);
-    const rect = e.currentTarget.getBoundingClientRect();
-    const localY = (e.clientY - rect.top) * e.currentTarget.height / (rect.height * devicePixelRatio);
-    const line = displayedBeatY(pane.renderGeometry, starts[p.measure]);
-    status(`就近吸附 r4 · 鼠标距 ${String(p.measure).padStart(3, "0")} 起线 ${(localY-line).toFixed(2)}px · 写入 ${String(p.measure).padStart(3, "0")} + ${p.slot}/${p.division} 小节`);
+
   }
   e.currentTarget.setPointerCapture(e.pointerId);
   const mode = $("tool").value;
@@ -646,7 +739,8 @@ canvas.onpointerdown = (e) => {
       y0: yy,
       y1: yy,
     };
-    drag = { box: true };
+    drag = { box: true, start: p };
+    if (mode === "time") timeStatus = { start: snappedBeat(p), length: 0 };
     draw();
     return;
   }
@@ -681,7 +775,6 @@ canvas.onpointerdown = (e) => {
       start: p,
       copy: e.ctrlKey || e.metaKey,
     };
-    $("selection").textContent = `选择 ${selectedIds.size} 个事件`;
     if ($("previewclick").checked && eventColumn(chart, found) > 2)
       preview(chart.resources.WAV[found.value]);
     draw();
@@ -740,10 +833,12 @@ function updateDragPreview(e) {
         ? 0
         : snappedBeat(p) - snappedBeat(drag.start);
       const deltaColumn = columns[p.lane].id - columns[drag.start.lane].id;
-      const notes = drag.notes.map((n) => ({
+      const moved = isPomuTheme(currentTheme)
+        ? shiftVisibleNotes(drag.notes, columns[drag.start.lane].id, columns[p.lane].id, columns)
+        : drag.notes.map(n => ({ ...n, column: n.column + deltaColumn }));
+      const notes = moved.map((n) => ({
         ...n,
         beat: n.beat + deltaBeat,
-        column: n.column + deltaColumn,
       }));
       const map = new Map(notes.map((n) => [eventId(n), n]));
       const pairs = longPairs(chart)
@@ -761,8 +856,14 @@ function updateSelectionBox(e) {
     r = e.currentTarget.getBoundingClientRect();
   if ($("tool").value !== "time") box.x1 = e.clientX - r.left + view.scrollLeft;
   box.y1 = e.clientY - r.top + view.scrollTop;
+  if ($("tool").value === "time") {
+    const p = location(e);
+    if (p) timeStatus = { start: snappedBeat(drag.start), length: snappedBeat(p) - snappedBeat(drag.start) };
+  }
 }
 canvas.onpointermove = (e) => {
+  rememberStatusPointer(e);
+  refreshPositionStatus();
   if (!drag) {
     if ($("tool").value === "write") {
       writePointer = { currentTarget: e.currentTarget, clientX: e.clientX, clientY: e.clientY };
@@ -874,7 +975,6 @@ canvas.onpointerup = (e) => {
       }
     }
     box = null;
-    $("selection").textContent = `选择 ${selectedIds.size} 个事件`;
     draw();
     return;
   }
@@ -906,12 +1006,15 @@ canvas.onpointerup = (e) => {
         (d.start.slot / d.start.division) *
           (starts[d.start.measure + 1] - starts[d.start.measure]));
   mutate(() =>
-    putCaptured(chart, d.notes, { deltaBeat, deltaColumn, copy: d.copy }),
+    isPomuTheme(currentTheme)
+      ? putCaptured(chart, shiftVisibleNotes(d.notes, columns[d.start.lane].id, columns[p.lane].id, columns), { deltaBeat, copy: d.copy })
+      : putCaptured(chart, d.notes, { deltaBeat, deltaColumn, copy: d.copy }),
   );
 };
-canvas.onpointerleave = () => { writePointer = null; draw(); };
+canvas.onpointerleave = () => { writePointer = null; statusPointer = null; draw(); };
 canvas.onpointercancel = () => {
   writePointer = null;
+  statusPointer = null;
   stopDragScroll();
   drag = null;
   box = null;
@@ -970,10 +1073,15 @@ $("noteeditapply").onclick = () => {
 };
 for (const pane of panes) {
   pane.view.onscroll = () => {
-    if ($("scrolllock").checked)
+    const delta = pane.view.scrollTop - (pane.lastScrollTop ?? pane.view.scrollTop);
+    pane.lastScrollTop = pane.view.scrollTop;
+    const lock = (p) => $(p === panes[0] ? "scrolllock" : p === panes[1] ? "scrolllock-left" : "scrolllock-right").checked;
+    if (lock(pane) && delta)
       for (const other of panes)
-        if (other !== pane && other.view.scrollTop !== pane.view.scrollTop)
-          other.view.scrollTop = pane.view.scrollTop;
+        if (other !== pane && lock(other)) {
+          other.view.scrollTop += delta;
+          other.lastScrollTop = other.view.scrollTop;
+        }
     draw();
   };
   // Rebuilding lanes may change scrollbars and viewport width. Defer writes
@@ -1017,6 +1125,7 @@ for (const [id, key] of [
     mutate(() => (chart.headers[key] = value));
   };
 $("undo").onclick = () => {
+  finishExpansionEdit();
   stop();
   chart = history.undo(chart);
   selected = null;
@@ -1024,6 +1133,7 @@ $("undo").onclick = () => {
   refresh();
 };
 $("redo").onclick = () => {
+  finishExpansionEdit();
   stop();
   chart = history.redo(chart);
   selected = null;
@@ -1031,6 +1141,42 @@ $("redo").onclick = () => {
   refresh();
 };
 $("grid").onchange = draw;
+$("subgrid").onchange = $("showsubgrid").onchange = draw;
+function syncSidebarControls() {
+  $("zoomslider").value = Math.min(5, Number($("zoom").value));
+  $("widthslider").value = Math.min(5, Number($("widthzoom").value));
+  for (const mode of ["absolute", "measure", "cut", "scale"])
+    $("beat-" + mode).checked = $("beatmode").value === mode;
+}
+for (const mode of ["absolute", "measure", "cut", "scale"])
+  $("beat-" + mode).onchange = () => {
+    if (!$("beat-" + mode).checked) return;
+    $("beatmode").value = mode;
+    syncSidebarControls();
+    persistPreferences();
+  };
+for (const [slider, input] of [["zoomslider", "zoom"], ["widthslider", "widthzoom"]]) {
+  $(slider).oninput = () => {
+    $(input).value = $(slider).value;
+    $(input).onchange();
+  };
+  $(slider).onchange = persistPreferences;
+}
+let horizontalZoom = 1;
+$("widthzoom").onchange = () => {
+  const next = Number($("widthzoom").value);
+  if (!Number.isFinite(next) || next < 0.25 || next > 99) {
+    $("widthzoom").value = horizontalZoom;
+    status("横向缩放范围为 0.25–99");
+    return;
+  }
+  const positions = panes.map(p => p.view.scrollLeft / horizontalZoom);
+  horizontalZoom = next;
+  rebuildColumns();
+  panes.forEach((p, i) => { p.view.scrollLeft = positions[i] * next; });
+  syncSidebarControls();
+  draw();
+};
 $("zoom").onchange = () => {
   const beat =
     (height - 20 - $("viewport").scrollTop - $("viewport").clientHeight / 2) /
@@ -1042,6 +1188,7 @@ $("zoom").onchange = () => {
     return;
   }
   scale = zoom * 48;
+  syncSidebarControls();
   refresh();
   $("viewport").scrollTop = y(beat) - $("viewport").clientHeight / 2;
   draw();
@@ -1053,7 +1200,7 @@ function applySelectedMeasureRatio(ratio) {
     $("beatmode").value, { nt: $("lnstyle").value === "nt" }));
   if (ok) {
     $("ratio").value = String(ratio);
-    const message = `已将 ${measures.map(m => String(m).padStart(3,"0")).join("、")} 小节设为长度比 ${ratio}（${ratio*4} 拍）`;
+    const message = "已更新节拍";
     status(message); $("measurefeedback").textContent = message;
   } else $("measurefeedback").textContent = $("status").textContent;
 }
@@ -1127,7 +1274,7 @@ $("new").onclick = async () => {
   stop();
   chart = parseBMS("#BPM 120\n#LNTYPE 1");
   resetBGMColumns();
-  $("saveformat").value = "bms";
+  $("saveformat").value = isPomuTheme(currentTheme) ? "pms" : "bms";
   history.reset(chart);
   dirty = false;
   buffers.clear();
@@ -1140,6 +1287,22 @@ $("new").onclick = async () => {
   $("viewport").scrollTop = height;
 };
 let openingFile = false;
+let themeBeforePMS;
+function applyFileDefaults(name) {
+  const pms = /\.pms$/i.test(name);
+  $("saveformat").value = /\.ibmscx$/i.test(name) ? "ibmscx" : /\.ibmsc$/i.test(name) ? "ibmsc" : pms ? "pms" : "bms";
+  if (pms) {
+    if (!isPomuTheme(currentTheme)) {
+      themeBeforePMS = currentTheme;
+      currentTheme = themes.Pomu;
+      $("theme").value = "Pomu";
+    }
+  } else if (themeBeforePMS !== undefined) {
+    currentTheme = themeBeforePMS;
+    themeBeforePMS = undefined;
+    $("theme").value = Object.keys(themes).find(name => themes[name] === currentTheme) || "";
+  }
+}
 async function openNativeFile(recentPath, droppedFile) {
   if (openingFile) return;
   if (!window.desktop) {
@@ -1168,7 +1331,7 @@ async function openNativeFile(recentPath, droppedFile) {
     stop();
     chart = next;
     resetBGMColumns();
-    $("saveformat").value = /\.ibmscx$/i.test(file.name) ? "ibmscx" : /\.ibmsc$/i.test(file.name) ? "ibmsc" : "bms";
+    applyFileDefaults(file.name);
     history.reset(chart);
     buffers.clear();
     wavSelection = new Set(["01"]);
@@ -1217,7 +1380,7 @@ async function openBrowserFile(f) {
     stop();
     chart = next;
     resetBGMColumns();
-    $("saveformat").value = /\.ibmscx$/i.test(f.name) ? "ibmscx" : /\.ibmsc$/i.test(f.name) ? "ibmsc" : "bms";
+    applyFileDefaults(f.name);
     history.reset(chart);
     buffers.clear();
     wavSelection = new Set(["01"]);
@@ -1235,6 +1398,7 @@ async function openBrowserFile(f) {
 }
 $("file").onchange = () => openBrowserFile($("file").files[0]);
 function confirmedSaveSnapshot(format = $("saveformat").value) {
+  finishExpansionEdit();
   const snapshot = structuredClone(chart);
   if (["ibmsc", "ibmscx"].includes(format) || !bgmLongEvents(snapshot).length) return snapshot;
   if (!confirm("BGM 区不可以在 BMS 中存放 LN/CN。继续保存会将这些长音符转为仅在起点播放的普通 BGM 音符，终点不会保存。编辑器中的暂存长条仍保留。是否继续？")) return null;
@@ -1246,7 +1410,7 @@ function savePayload(snapshot) {
     format,
     name:
       (snapshot.headers.TITLE || "untitled") +
-      (format === "ibmscx" ? ".ibmscx" : format === "ibmsc" ? ".ibmsc" : ".bms"),
+      (format === "ibmscx" ? ".ibmscx" : format === "ibmsc" ? ".ibmsc" : format === "pms" ? ".pms" : ".bms"),
     ...(format === "ibmscx" ? { text: writePortableProject(snapshot) } : format === "ibmsc"
       ? { bytes: writeProject(snapshot) }
       : { text: serializeBMS(snapshot) }),
@@ -1274,7 +1438,7 @@ $("save").onclick = async () => {
     return;
   }
   if ($("saveformat").value === "ibmscx") {
-    try { downloadText(writePortableProject(chart), (chart.headers.TITLE || "untitled") + ".ibmscx"); status("已发起移植版工程下载，暂存长条和 BASE 编号均保留"); }
+    try { downloadText(writePortableProject(chart), (chart.headers.TITLE || "untitled") + ".ibmscx"); status("已开始下载"); }
     catch (e) { status(e.message); }
     return;
   }
@@ -1290,11 +1454,11 @@ $("save").onclick = async () => {
     a = document.createElement("a");
   a.href = url;
   a.download =
-    (chart.headers.TITLE || "untitled").replace(/[\\/:*?"<>|]/g, "_") + ".bms";
+    (chart.headers.TITLE || "untitled").replace(/[\\/:*?"<>|]/g, "_") + ($("saveformat").value === "pms" ? ".pms" : ".bms");
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
   refresh();
-  status("已发起 UTF-8 BMS 下载；下载完成前仍保留未保存提示");
+  status("已开始下载");
 };
 async function context() {
   audio ??= new AudioContext();
@@ -1322,8 +1486,6 @@ $("audiofiles").onclick = () =>
   window.desktop ? loadProjectSounds() : $("sounds").click();
 if (window.desktop) {
   $("audiofiles").textContent = "重新关联音源";
-  $("soundhelp").textContent =
-    "打开谱面后自动读取 WAV 定义所指向的音源，包括 sound 等子文件夹。";
 }
 async function loadBrowserSounds(files) {
   try {
@@ -1483,9 +1645,7 @@ window.addEventListener("keydown", (e) => {
     }
     if (e.key === "F8") {
       e.preventDefault();
-      $("lnstyle").value = $("lnstyle").value === "nt" ? "bmse" : "nt";
-      persistPreferences();
-      draw();
+      $("toggleln").click();
       return;
     }
     if (/^[1-8]$/.test(e.key)) {
@@ -1534,8 +1694,7 @@ window.addEventListener("keydown", (e) => {
           )
           .map(eventId),
       );
-      $("selection").textContent = `选择 ${selectedIds.size} 个事件`;
-      draw();
+        draw();
     }
     return;
   }
@@ -1649,12 +1808,14 @@ window.addEventListener("beforeunload", (e) => {
 });
 refresh();
 $("viewport").scrollTop = height;
-status("空白谱面 · 滚动范围随谱面长度扩展");
+status("");
 
-$("show2p").onchange = () =>
+$("show2p").onchange = () => {
+  if (isPomuTheme(currentTheme)) return;
   mutate(() => {
     chart.headers.PLAYER = $("show2p").checked ? "3" : "1";
   });
+};
 for (const id of ["showbpm", "showstop", "showbga", "bgmcount"])
   $(id).onchange = () => {
     rebuildColumns();
@@ -1664,6 +1825,7 @@ for (const id of ["showbpm", "showstop", "showbga", "bgmcount"])
     draw();
   };
 $("sourceopen").onclick = () => {
+  closeMainMenus();
   const snapshot = confirmedSaveSnapshot("bms");
   if (!snapshot) return;
   $("source").value = serializeBMS(snapshot);
@@ -1681,7 +1843,7 @@ $("sourceapply").onclick = () => {
     )
       return;
     $("sourcedialog").close();
-    status("BMS 文本修改已应用，可撤销");
+    status("已应用修改");
   } catch (e) {
     $("sourceerror").textContent = e.message;
   }
@@ -1717,7 +1879,7 @@ $("copyrange").onclick = () => {
   try {
     copiedRows = copyMeasures(chart, ...range(), activeChannels);
     copiedRowsBase = chartBase(chart); copiedRowsSource = structuredClone(chart);
-    status("已复制全部轨道 " + copiedRows.length + " 行；粘贴到下方指定小节");
+    status("已复制全部轨道 " + copiedRows.length + " 行");
   } catch (e) {
     status(e.message);
   }
@@ -1730,7 +1892,7 @@ $("pasterange").onclick = () => {
   mutate(() => pasteMeasures(chart, copiedRowsBase === chartBase(chart) ? copiedRows : remapClipboardRows(chart, copiedRowsSource, copiedRows), Number($("measure").value)));
 };
 $("mirrorrange").onclick = () =>
-  mutate(() => mirrorMeasures(chart, ...range(), activeChannels));
+  mutate(() => mirrorMeasures(chart, ...range(), activeChannels, isPomuTheme(currentTheme) ? pomuChannels : null));
 $("deleterange").onclick = () =>
   mutate(() => deleteMeasures(chart, ...range(), activeChannels));
 
@@ -1742,12 +1904,13 @@ function report(title, text) {
   $("statstable").hidden = true;
   $("reporttitle").textContent = title;
   $("reporttext").textContent = text;
+  $("reporttext").hidden = !text;
   $("reportdialog").showModal();
 }
 $("reportclose").onclick = () => $("reportdialog").close();
 $("statistics").onclick = () => {
   const s = statistics(chart, { nt: $("lnstyle").value === "nt" });
-  report("统计", "A1–A8 按编辑器轨道逐列展开；Double／Couple 谱面或存在 D 组音符时同时展开 D1–D8。各组保留小计。沿用原版对象计数：长音符列统计长音符通道端点；LNOBJ 列统计匹配编号的标记，与普通对象计数重叠。隐藏和错误也不另加进总数。BGA / LAYER / POOR 计入总计。");
+  report("统计", "");
   const table = $("statstable");
   table.replaceChildren();
   const header = document.createElement("tr");
@@ -1755,7 +1918,7 @@ $("statistics").onclick = () => {
     const cell = document.createElement("th"); cell.textContent = title; header.append(cell);
   }
   table.append(header);
-  const displayRows = s.rows.flatMap((name, i) => i === 2
+  const displayRows = isPomuTheme(currentTheme) ? pomuStatisticsRows(s, currentTheme) : s.rows.flatMap((name, i) => i === 2
     ? [...s.aLanes, { name: "A1–A8 小计", counts: s.data[i], subtotal: true }]
     : i === 3 && s.showD
       ? [...s.dLanes, { name: "D1–D8 小计", counts: s.data[i], subtotal: true }]
@@ -1843,7 +2006,7 @@ $("projectexport").onclick = () => {
     a.download = (chart.headers.TITLE || "untitled") + ".ibmsc";
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
-    status("已导出 iBMSC 3.x 工程（新的撤销历史）");
+    status("已导出 IBMSC");
   } catch (e) {
     status(e.message);
   }
@@ -1860,7 +2023,7 @@ $("copynotes").onclick = () => {
   noteClipboardBase = chartBase(chart); noteClipboardSource = structuredClone(chart);
   noteClipboard = captured.map(n => ({ ...n, beat: n.beat - origin }));
   pasteTarget = null;
-  status("已复制 " + noteClipboard.length + " 个音符；选择目标小节后粘贴，保留小节内偏移");
+  status("已复制 " + noteClipboard.length + " 个音符");
 };
 $("deletenotes").onclick = () => {
   const list = captureNotes(chart, selectedIds);
@@ -1892,7 +2055,7 @@ $("pastenotes").onclick = () => {
       eventColumn(chart, n) === c.column && Math.abs(n.beat - c.beat - offset) < 1e-8
     )).map(eventId));
     draw();
-    status(`已粘贴 ${noteClipboard.length} 个音符至 ${String(measure).padStart(3, "0")} 小节，保留小节内偏移`);
+    status(`已粘贴 ${noteClipboard.length} 个音符至 ${String(measure).padStart(3, "0")} 小节`);
   }
 };
 $("convertnotes").onclick = () => {
@@ -1900,7 +2063,7 @@ $("convertnotes").onclick = () => {
   const type = $("conversion").value;
   if (!notes.length) return;
   if (type === "mirror") {
-    mutate(() => mirrorCaptured(chart, notes));
+    mutate(() => mirrorCaptured(chart, notes, isPomuTheme(currentTheme) ? pomuColumns : null));
     return;
   }
   const options =
@@ -2053,6 +2216,7 @@ const extraHeaders = [
 ];
 for (const key of extraHeaders) {
   const label = document.createElement("label");
+  if (key === "PLAYER") label.id = "header-player-label";
   label.textContent = headerLabels[key] || key;
   const input = document.createElement(headerChoices[key] ? "select" : "input");
   input.id = "header-" + key;
@@ -2076,7 +2240,7 @@ for (const key of extraHeaders) {
     });
   };
   label.append(input);
-  $("extraheaders").append(label);
+  $(["PLAYER", "RANK"].includes(key) ? "primaryheaders" : "extraheaders").append(label);
 }
 
 function argb(value) {
@@ -2091,6 +2255,7 @@ for (const name of Object.keys(themes)) {
   $("theme").append(option);
 }
 $("theme").onchange = () => {
+  themeBeforePMS = undefined;
   currentTheme = themes[$("theme").value] || null;
   persistTheme();
   rebuildColumns();
@@ -2121,6 +2286,7 @@ $("themefile").onchange = async () => {
     const visual = Object.fromEntries([...xml.querySelectorAll("VisualSettings > *")].map(e => [e.tagName, Object.fromEntries([...e.attributes].map(a => [a.name, a.value]))]));
     validateVisual(visual);
     currentTheme = { columns: cols, visual, sourceXml: text };
+    themeBeforePMS = undefined;
     persistTheme();
     rebuildColumns();
     draw();
@@ -2237,6 +2403,7 @@ for (const side of ["left", "right"])
   };
 const toolModes = ["time", "select", "write"];
 function syncToolButtons() {
+  refreshPositionStatus();
   for (const mode of toolModes)
     $("tool-" + mode).setAttribute(
       "aria-pressed",
@@ -2260,6 +2427,10 @@ for (const menu of mainMenus)
   menu
     .querySelector("summary")
     .addEventListener("click", () => closeMainMenus(menu));
+for (const menu of mainMenus)
+  menu.addEventListener("click", (event) => {
+    if (event.target.closest?.("button")) closeMainMenus();
+  });
 window.addEventListener("pointerdown", (e) => {
   if (!e.target.closest?.("header nav details.menu")) closeMainMenus();
 });
@@ -2272,6 +2443,58 @@ document.querySelectorAll("[data-action]").forEach(
       if (menu) menu.open = false;
     }),
 );
+
+// Settings belong to menu-launched dialogs. The same controls and handlers
+// remain authoritative, so moving them does not fork the editor's state.
+for (const name of ["generalsettings", "displaysettings", "playersettings",
+  "languagesettings", "themesettings", "fileoptions", "inputsettings", "bpmtools", "slashsettings"]) {
+  $(name).onclick = () => {
+    closeMainMenus();
+    $(name + "dialog").showModal();
+  };
+}
+function syncInputMode() {
+  const nt = $("lnstyle").value === "nt";
+  $("toggleln").textContent = `长音符输入方式：${nt ? "NT" : "BMSE"}　F8`;
+  $("toggleln").setAttribute("aria-pressed", String(nt));
+  document.querySelectorAll('[data-action="toggleln"]').forEach(button => {
+    button.textContent = nt ? "NT" : "BMSE";
+    button.setAttribute("aria-pressed", String(nt));
+    button.title = `当前 ${nt ? "NT" : "BMSE"}，切换输入方式（F8）`;
+  });
+}
+$("toggleln").onclick = () => {
+  $("lnstyle").value = $("lnstyle").value === "nt" ? "bmse" : "nt";
+  persistPreferences();
+  syncInputMode();
+  closeMainMenus();
+  draw();
+};
+$("lnstyle").addEventListener("change", syncInputMode);
+for (const type of ["long", "short", "hidden", "visible", "value", "mirror"]) {
+  $("convert-" + type).onclick = () => {
+    closeMainMenus();
+    if (!selectedIds.size) { status("请先选择要转换的音符"); return; }
+    if (type === "value") {
+      $("conversionvalue").value = $("sample").value;
+      $("conversionerror").textContent = "";
+      $("convertvaluedialog").showModal();
+      return;
+    }
+    $("conversion").value = type;
+    $("convertnotes").click();
+  };
+}
+$("applyconversionvalue").onclick = () => {
+  try {
+    const value = normalizeId(chart, $("conversionvalue").value);
+    if (!validId(chart, value)) throw Error("编号超出当前谱面进制范围");
+    const notes = captureNotes(chart, selectedIds);
+    if (mutate(() => putCaptured(chart, notes, { value }))) $("convertvaluedialog").close();
+    else $("conversionerror").textContent = $("status").textContent;
+  } catch (e) { $("conversionerror").textContent = e.message; }
+};
+syncInputMode();
 
 $("wavrename").onclick = () => {
   const from = normalizeId(chart, $("sample").value),
@@ -2483,9 +2706,12 @@ function applyPreferences(values) {
     else $(id).value = value;
   }
   scale = Number($("zoom").value) * 48;
+  horizontalZoom = Number($("widthzoom").value);
+  syncSidebarControls();
   $("samples").multiple = $("wavmulti").checked;
   for (const side of ["left", "right"])
     $("pane-" + side).hidden = !$("split-" + side).checked;
+  syncInputMode();
   refresh();
 }
 $("settingsimport").onclick = () => $("settingsfile").click();
@@ -2507,7 +2733,7 @@ $("settingsfile").onchange = async () => {
     applyPreferences(values);
     importedSettings = doc;
     persistPreferences();
-    status("已导入对应的原版编辑/网格设置");
+    status("已导入设置");
   } catch (e) {
     status(e.message);
   } finally {
@@ -2652,7 +2878,8 @@ $("options-resizer").onkeydown = (e) => {
   );
 };
 
-$("wavbrowse").onclick = async () => {
+$("wavbrowse").onclick = () => browseWAV();
+async function browseWAV(single = false) {
   if (!window.desktop?.chooseSounds) {
     status(
       "目录内音源分配请使用桌面版；网页版可通过加载音源文件关联已有定义。",
@@ -2660,9 +2887,9 @@ $("wavbrowse").onclick = async () => {
     return;
   }
   const target = chart,
-    selection = [...wavSelection];
+    selection = single ? [$("sample").value] : [...wavSelection];
   try {
-    const names = await window.desktop.chooseSounds($("wavmulti").checked);
+    const names = await window.desktop.chooseSounds(!single && $("wavmulti").checked);
     if (!names?.length || chart !== target) return;
     let assigned;
     if (
@@ -2678,7 +2905,7 @@ $("wavbrowse").onclick = async () => {
   } catch (e) {
     status(e.message);
   }
-};
+}
 
 function drawWaveOverlay(ctx, top, left, pixels) {
   if (!overlayBuffer || !overlayClock) return;
@@ -2819,7 +3046,10 @@ if (window.desktop?.nativeMenu) {
     if (document.querySelector("dialog[open]")) return;
     if (action === "openRecent") { openNativeFile(payload); return; }
     if (measurePaste && active === $("measure")) selectPasteMeasure();
-    const allowed = ["portableexport", "about", "new", "open", "save", "saveas", "projectexport", "recover", "undo", "redo", "cutnotes", "copynotes", "pastenotes", "deletenotes", "selectall", "findopen", "statistics", "errorcheck", "themeimport", "toggle-options", "convertnotes", "play", "playhere", "stop"];
+    const allowed = ["portableexport", "about", "new", "open", "save", "saveas", "projectexport", "recover", "undo", "redo", "cutnotes", "copynotes", "pastenotes", "deletenotes", "selectall", "findopen", "statistics", "errorcheck", "themeimport", "toggle-options", "convertnotes", "play", "playhere", "stop",
+      "generalsettings", "displaysettings", "playersettings", "languagesettings", "themesettings", "fileoptions", "inputsettings", "bpmtools", "toggleln", "previewclick", "showfilename",
+      "tool-time", "tool-select", "tool-write", "externalbegin", "externalhere", "externalstop",
+      "convert-long", "convert-short", "convert-hidden", "convert-visible", "convert-value", "convert-mirror", "sourceopen"];
     if (allowed.includes(action)) $(action).click();
   });
 }
@@ -2846,10 +3076,9 @@ $("portableexport").onclick = async () => {
 };
 
 function drawNoteLabel(ctx, col, timeY, text, long = false) {
-  ctx.font = visualFont(currentTheme, "kFont", "10px monospace");
-  const themed = !!currentTheme?.visual?.kFont;
-  ctx.textBaseline = themed ? "top" : "alphabetic";
-  ctx.fillText(text, col.left + 3 + visualNumber(currentTheme, long ? "kLabelHShiftL" : "kLabelHShift", 0),
-    themed ? timeY - noteHeight() + visualNumber(currentTheme, "kLabelVShift", 0) : timeY - 1, col.width - 6);
-  ctx.textBaseline = "alphabetic";
+  paintNoteLabel(ctx, col, timeY, text, {
+    height: noteHeight(), font: visualFont(currentTheme, "kFont", "10px monospace"),
+    shiftX: visualNumber(currentTheme, long ? "kLabelHShiftL" : "kLabelHShift", 0),
+    shiftY: visualNumber(currentTheme, "kLabelVShift", 0),
+  });
 }

@@ -100,18 +100,19 @@ ipcMain.handle(
   "file:save",
   checked(async (request) => {
     const bytes = require("./save-data.cjs").saveBytes(request);
-    const project = request.format === "ibmsc", portable = request.format === "ibmscx";
+    const project = request.format === "ibmsc", portable = request.format === "ibmscx", pms = request.format === "pms";
     let target = request.saveAs ? null : currentPath;
-    const compatible = portable ? /\.ibmscx$/i : project ? /\.ibmsc$/i : /\.(bms|bme|bml|pms)$/i;
+    const compatible = portable ? /\.ibmscx$/i : project ? /\.ibmsc$/i : pms ? /\.pms$/i : /\.(bms|bme|bml)$/i;
     if (!target || !compatible.test(target)) {
       const choice = await dialog.showSaveDialog(win, {
         defaultPath: path.basename(
-          request.name || (portable ? "untitled.ibmscx" : project ? "untitled.ibmsc" : "untitled.bms"),
+          request.name || (portable ? "untitled.ibmscx" : project ? "untitled.ibmsc" : pms ? "untitled.pms" : "untitled.bms"),
         ),
         filters: [
-          portable ? { name: "移植版工程", extensions: ["ibmscx"] } : project
-            ? { name: "iBMSC 工程", extensions: ["ibmsc"] }
-            : { name: "BMS", extensions: ["bms", "bme", "bml", "pms"] },
+          portable ? { name: "IBMSCX", extensions: ["ibmscx"] } : project
+            ? { name: "IBMSC", extensions: ["ibmsc"] }
+            : pms ? { name: "PMS", extensions: ["pms"] }
+            : { name: "BMS", extensions: ["bms", "bme", "bml"] },
         ],
       });
       if (choice.canceled) return null;
@@ -299,7 +300,10 @@ app.on("will-quit", () => {
 });
 
 function installMenu() {
-  if (process.platform !== "darwin") return;
+  if (process.platform !== "darwin") {
+    Menu.setApplicationMenu(null);
+    return;
+  }
   Menu.setApplicationMenu(Menu.buildFromTemplate(require("./menu.cjs").menuTemplate(
     (action, payload) => {
       const target = BrowserWindow.getFocusedWindow();
@@ -314,8 +318,9 @@ ipcMain.handle("menu:edit", checked((action) => {
 }));
 
 function create() {
+  installMenu();
   win = new BrowserWindow({
-    show: !verificationReport,
+    show: false,
     width: 1440,
     height: 960,
     minWidth: 900,
@@ -328,6 +333,7 @@ function create() {
       sandbox: true,
     },
   });
+  if (!verificationReport) win.once("ready-to-show", () => win.show());
   win.webContents.on("will-prevent-unload", (event) => {
     const choice = dialog.showMessageBoxSync(win, {
       type: "warning", title: "尚未保存", message: "谱面有未保存的修改。",
@@ -354,7 +360,6 @@ function create() {
     setTimeout(() => finish(false, "startup timeout"), 20000).unref();
   }
   win.loadFile(entry);
-  installMenu();
 }
 app.whenReady().then(async () => {
   recent = new (require("./recent.cjs").RecentFiles)(

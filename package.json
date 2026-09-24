@@ -1,6 +1,6 @@
 {
   "name": "ibmsc-node",
-  "version": "0.1.7",
+  "version": "0.1.14",
   "private": true,
   "type": "module",
   "main": "electron/main.cjs",
@@ -9,13 +9,16 @@
     "dev": "node server.mjs",
     "test": "node --test",
     "check": "node --check src/app.js && node --check src/bms.js && node --check electron/main.cjs",
-    "package:mac": "node scripts/package-macos.mjs"
+    "package:mac": "node scripts/package-macos.mjs",
+    "package:win": "node scripts/package-windows.mjs",
+    "package:win:portable": "node scripts/package-portable.mjs"
   },
   "engines": {
     "node": ">=22"
   },
   "devDependencies": {
     "electron": "44.3.0",
+    "electron-builder": "26.15.3",
     "prettier": "3.9.6"
   },
   "dependencies": {

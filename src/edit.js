@@ -42,7 +42,7 @@ export function pasteMeasures(chart, rows, at) {
   }
   chart.rows.push(...added);
 }
-export function mirrorMeasures(chart, from, to, visibleChannels) {
+export function mirrorMeasures(chart, from, to, visibleChannels, keyChannels = null) {
   copyMeasures(chart, from, to, visibleChannels);
   const keys = ["1", "2", "3", "4", "5", "8", "9"];
   for (const r of chart.rows) {
@@ -53,6 +53,16 @@ export function mirrorMeasures(chart, from, to, visibleChannels) {
       !/^[1-8]/.test(r.channel)
     )
       continue;
+    if (keyChannels) {
+      const group = Math.floor((Number(r.channel[0]) - 1) / 2) * 2;
+      const base = String(Number(r.channel[0]) - group) + r.channel[1];
+      const index = keyChannels.indexOf(base);
+      if (index >= 0) {
+        const target = keyChannels.at(-1 - index);
+        r.channel = String(Number(target[0]) + group) + target[1];
+      }
+      continue;
+    }
     const i = keys.indexOf(r.channel[1]);
     if (i >= 0) r.channel = r.channel[0] + keys[6 - i];
   }

@@ -53,7 +53,9 @@ test("controller initializes and routes document edits, history, columns and sou
         {},
         {
           get: (_, key) =>
-            key === "createLinearGradient"
+            key === "measureText"
+              ? text => ({ width: text.length * 6, actualBoundingBoxAscent: 8, actualBoundingBoxDescent: 2, actualBoundingBoxLeft: 0, actualBoundingBoxRight: text.length * 6 })
+              : key === "createLinearGradient"
               ? () => ({ addColorStop() {} })
               : () => {},
         },
@@ -143,6 +145,70 @@ test("controller initializes and routes document edits, history, columns and sou
     });
     await import("../src/app.js");
     assert.equal(Number(nodes.get("zoom").value), 4);
+    nodes.get("theme").value = "IIDX";
+    nodes.get("theme").onchange();
+    for (const id of ["laneheads", "heads-left", "heads-right"]) {
+      assert.equal(nodes.get(id).style.color, "rgba(0,255,0,1)");
+      assert.equal(nodes.get(id).style.backgroundColor, "rgba(0,0,0,1)");
+    }
+    nodes.get("theme").value = "";
+    nodes.get("theme").onchange();
+    assert.equal(nodes.get("laneheads").style.backgroundColor, "#000");
+    const widthBefore = nodes.get("laneheads").style.gridTemplateColumns;
+    nodes.get("widthzoom").value = "2";
+    nodes.get("widthzoom").onchange();
+    assert.equal(parseFloat(nodes.get("laneheads").style.gridTemplateColumns), parseFloat(widthBefore) * 2);
+    assert.equal(Number(nodes.get("widthslider").value), 2);
+    nodes.get("widthzoom").value = "1";
+    nodes.get("widthzoom").onchange();
+    const mainView = nodes.get("viewport"), leftView = nodes.get("view-left");
+    mainView.onscroll();
+    const mainTop = mainView.scrollTop;
+    nodes.get("scrolllock-left").checked = false;
+    leftView.scrollTop = mainTop - 100;
+    leftView.onscroll();
+    assert.equal(mainView.scrollTop, mainTop);
+    nodes.get("scrolllock-left").checked = true;
+    mainView.scrollTop += 40;
+    mainView.onscroll();
+    assert.equal(leftView.scrollTop, mainTop - 60);
+    leftView.onscroll();
+    assert.equal(mainView.scrollTop, mainTop + 40);
+    nodes.get("beat-scale").checked = true;
+    nodes.get("beat-scale").onchange();
+    assert.equal(nodes.get("beatmode").value, "scale");
+    nodes.get("beat-absolute").checked = true;
+    nodes.get("beat-absolute").onchange();
+    const expansionBefore = nodes.get("expansion").value;
+    const extra = "#RANDOM 2\n#IF 1\n#00111:0100\n#ENDIF\n#ENDRANDOM";
+    nodes.get("expansion").value = extra.slice(0, 20);
+    nodes.get("expansion").oninput();
+    nodes.get("expansion").value = extra;
+    nodes.get("expansion").oninput();
+    assert.match(document.title, /^●/);
+    assert.equal(nodes.get("count").textContent, "0");
+    nodes.get("sourceopen").click();
+    assert.ok(nodes.get("source").value.replaceAll("\r\n", "\n").includes(extra));
+    nodes.get("sourcecancel").click();
+    nodes.get("undo").click();
+    assert.equal(nodes.get("expansion").value, expansionBefore);
+    nodes.get("redo").click();
+    assert.equal(nodes.get("expansion").value, extra);
+    nodes.get("undo").click();
+    const browseModes = [];
+    window.desktop = { chooseSounds: async multiple => { browseModes.push(multiple); return []; } };
+    await nodes.get("samples").ondblclick();
+    await nodes.get("wavbrowse").click();
+    assert.deepEqual(browseModes, [false, true]);
+    delete window.desktop;
+    nodes.get("playersettings").click();
+    assert.equal(nodes.get("playersettingsdialog").open, true);
+    nodes.get("playersettingsdialog").close();
+    nodes.get("toggleln").click();
+    assert.equal(nodes.get("lnstyle").value, "bmse");
+    assert.match(nodes.get("toggleln").textContent, /BMSE/);
+    nodes.get("toggleln").click();
+    assert.equal(nodes.get("lnstyle").value, "nt");
     nodes.get("statistics").click();
     assert.equal(nodes.get("statstable").hidden, false);
     assert.equal(nodes.get("statstable").children.length, 15);
@@ -182,7 +248,7 @@ test("controller initializes and routes document edits, history, columns and sou
       .get("options-resizer")
       .onkeydown({ key: "Home", preventDefault() {} });
     assert.equal(nodes.get("workspace").style["--options-width"], "200px");
-    assert.equal(nodes.get("count").textContent, "0 个事件");
+    assert.equal(nodes.get("count").textContent, "0");
     assert.ok(
       nodes.get("laneheads").children.some((n) => n.textContent === "B8"),
     );
@@ -243,18 +309,40 @@ test("controller initializes and routes document edits, history, columns and sou
 
     nodes.get("source").value = "#TITLE Smoke\n#BPM 120\n#00011:01\n#00112:02";
     nodes.get("sourceapply").click();
-    assert.equal(nodes.get("count").textContent, "2 个事件");
+    assert.equal(nodes.get("count").textContent, "2");
     assert.equal(nodes.get("project").textContent, "Smoke");
     nodes.get("undo").click();
-    assert.equal(nodes.get("count").textContent, "0 个事件");
+    assert.equal(nodes.get("count").textContent, "0");
     assert.equal(document.title.startsWith("●"), false);
     nodes.get("redo").click();
-    assert.equal(nodes.get("count").textContent, "2 个事件");
+    assert.equal(nodes.get("count").textContent, "2");
+    nodes.get("selectall").click();
+    // Menu conversions act on the requested type, independent of the old selector.
+    nodes.get("conversion").value = "long";
+    nodes.get("convert-hidden").click();
+    nodes.get("sourceopen").click();
+    assert.ok(events(parseBMS(nodes.get("source").value)).every(n => /[34]/.test(n.channel[0])));
+    nodes.get("sourcecancel").click();
+    nodes.get("undo").click();
+    nodes.get("selectall").click();
+    nodes.get("convert-value").click();
+    assert.equal(nodes.get("convertvaluedialog").open, true);
+    nodes.get("conversionvalue").value = "00";
+    nodes.get("applyconversionvalue").click();
+    assert.match(nodes.get("conversionerror").textContent, /编号/);
+    assert.equal(nodes.get("convertvaluedialog").open, true);
+    nodes.get("conversionvalue").value = "0A";
+    nodes.get("applyconversionvalue").click();
+    assert.equal(nodes.get("convertvaluedialog").open, false);
+    nodes.get("sourceopen").click();
+    assert.ok(events(parseBMS(nodes.get("source").value)).every(n => n.value === "0A"));
+    nodes.get("sourcecancel").click();
+    nodes.get("undo").click();
     nodes.get("selectall").click();
     nodes.get("deletenotes").click();
-    assert.equal(nodes.get("count").textContent, "0 个事件");
+    assert.equal(nodes.get("count").textContent, "0");
     nodes.get("undo").click();
-    assert.equal(nodes.get("count").textContent, "2 个事件");
+    assert.equal(nodes.get("count").textContent, "2");
     nodes.get("show2p").checked = false;
     nodes.get("show2p").onchange();
     assert.equal(
@@ -372,7 +460,7 @@ test("controller initializes and routes document edits, history, columns and sou
       preventDefault() {},
     });
     assert.equal(nodes.get("project").textContent, "Dropped");
-    assert.equal(nodes.get("count").textContent, "1 个事件");
+    assert.equal(nodes.get("count").textContent, "1");
     await handlers.drop({
       dataTransfer: { files: [droppedFile, { name: "second.bms" }] },
       preventDefault() {},
@@ -421,23 +509,36 @@ test("controller initializes and routes document edits, history, columns and sou
       clientY: 425,
       pointerId: 1,
     };
+    nodes.get("widthzoom").value = "2";
+    nodes.get("widthzoom").onchange();
+    canvas.onpointerdown({ ...pointer, clientX: pointer.clientX * 2 });
+    canvas.onpointerup({ ...pointer, clientX: pointer.clientX * 2 });
+    nodes.get("sourceopen").click();
+    const zoomedChannel = events(parseBMS(nodes.get("source").value))[0].channel;
+    nodes.get("sourcecancel").click();
+    nodes.get("undo").click();
+    nodes.get("widthzoom").value = "1";
+    nodes.get("widthzoom").onchange();
     canvas.onpointermove(pointer);
     canvas.onpointerleave();
     canvas.onpointerdown(pointer);
-    assert.match(nodes.get("status").textContent, /就近吸附 r4.*写入/);
+    assert.equal(nodes.get("status").textContent, "");
     canvas.onpointerup(pointer);
-    assert.equal(nodes.get("count").textContent, "1 个事件");
+    assert.equal(nodes.get("count").textContent, "1");
+    nodes.get("sourceopen").click();
+    assert.equal(events(parseBMS(nodes.get("source").value))[0].channel, zoomedChannel);
+    nodes.get("sourcecancel").click();
     nodes.get("undo").click();
-    assert.equal(nodes.get("count").textContent, "0 个事件");
+    assert.equal(nodes.get("count").textContent, "0");
     canvas.onpointerdown(pointer);
     canvas.onpointermove({ ...pointer, clientY: 329 });
-    assert.equal(nodes.get("count").textContent, "0 个事件");
+    assert.equal(nodes.get("count").textContent, "0");
     canvas.onpointercancel();
-    assert.equal(nodes.get("count").textContent, "0 个事件");
+    assert.equal(nodes.get("count").textContent, "0");
     canvas.onpointerdown(pointer);
     canvas.onpointermove({ ...pointer, clientY: 329 });
     canvas.onpointerup({ ...pointer, clientY: 329 });
-    assert.equal(nodes.get("count").textContent, "2 个事件");
+    assert.equal(nodes.get("count").textContent, "2");
     nodes.get("tool-select").click();
     canvas.ondblclick(pointer);
     assert.equal(nodes.get("noteeditdialog").open, true);
@@ -455,7 +556,7 @@ test("controller initializes and routes document edits, history, columns and sou
       preventDefault() {},
     });
     assert.equal(nodes.get("sample").value, "02");
-    assert.equal(nodes.get("count").textContent, "2 个事件");
+    assert.equal(nodes.get("count").textContent, "2");
     canvas.onpointerdown({ ...pointer, clientY: 329, shiftKey: true });
     canvas.onpointerup({ ...pointer, clientY: 281, shiftKey: true });
     nodes.get("sourceopen").click();
@@ -469,9 +570,9 @@ test("controller initializes and routes document edits, history, columns and sou
     nodes.get("sourcecancel").click();
     nodes.get("undo").click();
     canvas.oncontextmenu({ ...pointer, clientY: 370, preventDefault() {} });
-    assert.equal(nodes.get("count").textContent, "0 个事件");
+    assert.equal(nodes.get("count").textContent, "0");
     nodes.get("undo").click();
-    assert.equal(nodes.get("count").textContent, "2 个事件");
+    assert.equal(nodes.get("count").textContent, "2");
     for (const [key, mode] of [
       ["F1", "time"],
       ["F3", "write"],
@@ -571,7 +672,7 @@ test("controller initializes and routes document edits, history, columns and sou
     nodes.get("applysignature").click();
     assert.equal(nodes.get("measurelist").children[0].textContent, "000: 0.75 ( 3 / 4 )");
     assert.deepEqual(readBeats(), [0,1.5,3]);
-    assert.match(nodes.get("measurefeedback").textContent, /已将 000/);
+    assert.match(nodes.get("measurefeedback").textContent, /已更新节拍/);
     nodes.get("undo").click();
     assert.deepEqual(readBeats(), [0,2,4]);
     nodes.get("insertmeasure").click();
@@ -641,8 +742,111 @@ test("controller initializes and routes document edits, history, columns and sou
     assert.equal(savedRequest.format, "ibmscx");
     const {readPortableProject} = await import("../src/portable-project.js");
     assert.equal(readPortableProject(savedRequest.text).headers.BASE, "62");
+    // PMS is a single nine-key field, despite using channels from both BMS groups.
+    nodes.get("theme").value = "IIDX";
+    nodes.get("theme").onchange();
+    const pmsText = "#TITLE Nine keys\n#PLAYER 1\n#BPM 120\n#00011:01\n#00015:02\n#00022:03\n#00025:04";
+    const pmsBytes = new TextEncoder().encode(pmsText);
+    window.desktop.open = async () => ({name: "Nine.PMS", bytes: pmsBytes, token: "pms"});
+    window.desktop.acceptOpen = async () => ({});
+    window.desktop.cancelOpen = async () => {};
+    await nodes.get("open").click();
+    assert.equal(nodes.get("theme").value, "Pomu");
+    assert.equal(nodes.get("saveformat").value, "pms");
+    assert.equal(nodes.get("secondplayer-option").hidden, true);
+    assert.equal(nodes.get("header-player-label").hidden, true);
+    assert.equal(nodes.get("show2p").checked, false);
+    assert.deepEqual(nodes.get("laneheads").children.slice(4, 13).map(n => n.textContent),
+      ["LW", "LY", "LG", "LB", "RED", "RB", "RG", "RY", "RW"]);
+    nodes.get("statistics").click();
+    assert.deepEqual(nodes.get("statstable").children.slice(3,12).map(row => row.children[0].textContent),
+      ["1 LW", "2 LY", "3 LG", "4 LB", "5 RED", "6 RB", "7 RG", "8 RY", "9 RW"]);
+    nodes.get("reportclose").click();
+    await nodes.get("save").onclick();
+    assert.equal(savedRequest.format, "pms");
+    assert.equal(savedRequest.name, "Nine keys.pms");
+    assert.equal(parseBMS(savedRequest.text).headers.PLAYER, "1");
+    assert.equal(events(parseBMS(savedRequest.text)).length, 4);
+    window.desktop.open = async () => ({name: "single.bms", bytes: pmsBytes, token: "bms"});
+    await nodes.get("open").click();
+    assert.equal(nodes.get("theme").value, "IIDX");
+    assert.equal(nodes.get("saveformat").value, "bms");
+    assert.equal(nodes.get("secondplayer-option").hidden, false);
+    // Browser opening uses the same defaults, and manual theme changes take precedence.
+    nodes.get("file").files = [{name: "browser.pms", arrayBuffer: async () => pmsBytes.buffer}];
+    await nodes.get("file").onchange();
+    assert.equal(nodes.get("saveformat").value, "pms");
+    assert.equal(nodes.get("theme").value, "Pomu");
+    nodes.get("theme").value = "IIDX";
+    nodes.get("theme").onchange();
+    assert.equal(nodes.get("saveformat").value, "pms");
     nodes.get("about").click();
     assert.match(nodes.get("reporttext").textContent, /MusicGameLAB/);
+
+    // Status follows the current pane and the actual note, not the nearest grid.
+    nodes.get("reportclose").click();
+    nodes.get("theme").value = "";
+    nodes.get("theme").onchange();
+    nodes.get("source").value = "#BPM 120\n#00051:01010000\n#00008:0001";
+    nodes.get("sourceapply").click();
+    nodes.get("zoom").value = "1";
+    nodes.get("zoom").onchange();
+    nodes.get("grid").value = "16";
+    nodes.get("snap").checked = true;
+    nodes.get("tool-select").click();
+    const laneWidths = nodes.get("laneheads").style.gridTemplateColumns.split(" ").map(parseFloat);
+    const laneX = title => {
+      const index = nodes.get("laneheads").children.findIndex(n => n.textContent === title);
+      return laneWidths.slice(0, index).reduce((a, b) => a + b, 0) + 10;
+    };
+    const hover = (beat, title = "A1", paneCanvas = canvas, paneView = view) => {
+      const totalHeight = parseFloat(nodes.get("scrollspace").style.height);
+      paneView.scrollTop = totalHeight - paneView.clientHeight;
+      paneView.onscroll();
+      const e = { ...pointer, currentTarget: paneCanvas, clientX: laneX(title),
+        clientY: totalHeight - 20 - beat * 48 - paneView.scrollTop };
+      paneCanvas.onpointermove(e);
+      return e;
+    };
+    hover(2);
+    assert.equal(nodes.get("status-column").textContent, "A1");
+    assert.equal(nodes.get("status-measure").textContent, "000");
+    assert.equal(nodes.get("status-grid").textContent, "8 / 16");
+    assert.equal(nodes.get("status-reduced").textContent, "1 / 2");
+    assert.equal(nodes.get("status-measurePosition").textContent, "96 / 192");
+    assert.equal(nodes.get("status-absolute").textContent, "96");
+    hover(0.5, "A2"); // Inside the long-note body: show its start and full length.
+    assert.equal(nodes.get("status-note").textContent, "01");
+    assert.equal(nodes.get("status-absolute").textContent, "0");
+    assert.equal(nodes.get("status-length").textContent, "长度 = 48");
+    hover(1, "A2"); // NT endpoint belongs to the same long note.
+    assert.equal(nodes.get("status-absolute").textContent, "0");
+    nodes.get("lnstyle").value = "bmse";
+    hover(1, "A2");
+    assert.equal(nodes.get("status-absolute").textContent, "48");
+    assert.equal(nodes.get("status-length").textContent, "长音符");
+    nodes.get("lnstyle").value = "nt";
+    nodes.get("split-left").checked = true;
+    nodes.get("split-left").onchange();
+    hover(3, "A1", nodes.get("chart-left"), nodes.get("view-left"));
+    assert.equal(nodes.get("status-absolute").textContent, "144");
+    nodes.get("tool-write").click();
+    nodes.get("sample").value = "0A";
+    hover(0.52, "A2");
+    assert.equal(nodes.get("status-absolute").textContent, "24");
+    assert.equal(nodes.get("status-note").textContent, "0A");
+    nodes.get("tool-time").click();
+    assert.equal(nodes.get("positionstatus").hidden, true);
+    const timeStart = hover(2, "A1");
+    canvas.onpointerdown(timeStart);
+    canvas.onpointermove({ ...timeStart, clientY: timeStart.clientY - 48 });
+    assert.equal(nodes.get("status-time-start").textContent, "96");
+    assert.equal(nodes.get("status-time-length").textContent, "48");
+    assert.equal(nodes.get("status-time-half").textContent, "24");
+    canvas.onpointerup({ ...timeStart, clientY: timeStart.clientY - 48 });
+    nodes.get("tool-select").click();
+    assert.equal(nodes.get("positionstatus").hidden, false);
+    assert.equal(nodes.get("timestatus").hidden, true);
   } finally {
     for (const [key, value] of Object.entries(prior)) {
       if (value === undefined) delete globalThis[key];

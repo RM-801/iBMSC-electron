@@ -24,7 +24,7 @@ function saveBytes(request) {
       throw Error("无效 iBMSC 工程数据");
     return Buffer.from(request.bytes);
   }
-  if (request?.format && request.format !== "bms") throw Error("无效保存格式");
+  if (request?.format && !["bms", "pms"].includes(request.format)) throw Error("无效保存格式");
   if (
     typeof request?.text !== "string" ||
     request.text.length > 32 * 1024 * 1024

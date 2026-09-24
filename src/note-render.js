@@ -20,6 +20,73 @@ export function noteColor(value, brightness = 0) {
   );
   return `rgba(${rgb.join(",")},${alpha})`;
 }
+// Canvas and GDI+ have different font metrics. Fit the visible glyphs, not the
+// nominal point size, and keep legacy label offsets inside the note border.
+export function paintNoteLabel(
+  ctx,
+  col,
+  timeY,
+  text,
+  { height = 10, font = "10px monospace", shiftX = 0, shiftY = 0 } = {},
+) {
+  const rect = noteRectangle(col.left, col.width, timeY, height);
+  const inner = {
+    x: rect.x + 1,
+    y: rect.y + 1,
+    width: rect.width - 2,
+    height: rect.height - 2,
+  };
+  if (inner.width <= 0 || inner.height <= 0 || !text) return;
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(inner.x, inner.y, inner.width, inner.height);
+  ctx.clip();
+  ctx.font = font;
+  ctx.textAlign = "left";
+  ctx.textBaseline = "alphabetic";
+  const metrics = ctx.measureText(text);
+  const ascent = Math.max(0, metrics.actualBoundingBoxAscent);
+  const descent = Math.max(0, metrics.actualBoundingBoxDescent);
+  const scale = Math.min(1, inner.height / (ascent + descent || 1));
+  const dx = Math.max(0, Math.min(inner.width, shiftX));
+  const available = (inner.width - dx) / scale;
+  const inkWidth = (m) =>
+    Math.max(m.width, m.actualBoundingBoxLeft + m.actualBoundingBoxRight);
+  let label = String(text);
+  if (inkWidth(metrics) > available) {
+    const chars = Array.from(label);
+    let low = 0,
+      high = chars.length;
+    while (low < high) {
+      const middle = Math.ceil((low + high) / 2);
+      if (
+        inkWidth(ctx.measureText(chars.slice(0, middle).join("") + "…")) <=
+        available
+      )
+        low = middle;
+      else high = middle - 1;
+    }
+    label = chars.slice(0, low).join("") + "…";
+    if (inkWidth(ctx.measureText(label)) > available) {
+      ctx.restore();
+      return;
+    }
+  }
+  const fitted = ctx.measureText(label);
+  // Recompute vertical ink bounds after truncation (a filename's descenders
+  // may have disappeared). Both positive and negative legacy shifts are bounded.
+  const inkHeight =
+    (fitted.actualBoundingBoxAscent + fitted.actualBoundingBoxDescent) * scale;
+  const spare = Math.max(0, inner.height - inkHeight);
+  const dy = Math.max(0, Math.min(spare, spare / 2 + shiftY));
+  ctx.translate(
+    inner.x + dx + fitted.actualBoundingBoxLeft * scale,
+    inner.y + dy + fitted.actualBoundingBoxAscent * scale,
+  );
+  ctx.scale(scale, scale);
+  ctx.fillText(label, 0, 0);
+  ctx.restore();
+}
 export function paintNote(
   ctx,
   col,

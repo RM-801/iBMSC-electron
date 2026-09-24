@@ -106,7 +106,7 @@ test("XML update keeps nested settings, root metadata and imported document unch
 });
 
 test("original continuous vertical zoom and 999 BGM columns survive settings roundtrip", () => {
-  const values = { zoom: 1.25, bgmcount: 999 };
+  const values = { zoom: 1.25, widthzoom: 2.75, subgrid: 12, showsubgrid: false, bgmcount: 999 };
   assert.deepEqual(
     readPreferenceAttributes(writePreferenceAttributes(values)),
     values,

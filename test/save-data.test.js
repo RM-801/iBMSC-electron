@@ -17,4 +17,6 @@ test("desktop saves an actual binary project and preserves Chinese BMS encodings
     save.saveBytes({ format: "ibmsc", bytes: new Uint8Array([1, 2]) }),
   );
   assert.throws(() => save.saveBytes({ text: "🎵", encoding: "shift_jis" }));
+  const pms = "#PLAYER 1\n#00025:01";
+  assert.equal(save.saveBytes({format: "pms", text: pms, encoding: "shift_jis"}).toString(), pms);
 });
