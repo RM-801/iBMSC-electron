@@ -55,3 +55,8 @@ test('Double D1-D8 breakdown includes D8 scratch, hidden and LN in its own subto
  assert.equal(statistics(parseBMS('#PLAYER 1')).showD,false);
  assert.equal(statistics(parseBMS('#PLAYER 1\n#00021:01')).showD,true);
 });
+
+test('toolbar follows CalculateTotalNotes: only A1-A8, hidden included, LN endpoints counted', () => {
+ const c = parseBMS('#BPM 120\n#LNOBJ ZZ\n#00011:01ZZ\n#00151:0101\n#00231:01\n#00316:01\n#00021:01\n#00061:0101\n#00001:01\n#00003:78\n#00004:01');
+ for (const nt of [false,true]) assert.equal(statistics(c,{nt}).data[2][5],6);
+});

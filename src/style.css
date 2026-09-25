@@ -1333,3 +1333,18 @@ button[data-icon="PlayerOptions"]::before {
   white-space: pre;
   overflow: auto;
 }
+
+/* The upstream statistics control is one image-and-text button. */
+.toolbar #statistics {
+  width: auto;
+  flex: 0 0 auto;
+  min-width: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 4px;
+  overflow: visible;
+  text-indent: 0;
+}
+.toolbar #statistics::before { flex: 0 0 16px; }
+.toolbar #statistics #count { font-size: 11px; font-weight: bold; color: inherit; }

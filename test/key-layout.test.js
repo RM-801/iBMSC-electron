@@ -74,3 +74,17 @@ test("horizontal movement skips unused BMS channels at the middle of the nine-ke
   assert.equal(events(chart)[0].channel, "22");
   assert.throws(() => shiftVisibleNotes([{ column: 17 }], 9, 14, columns));
 });
+
+test('toolbar count follows SP, DP and nine-key fields without BGM or control events', async () => {
+ const { playableNoteCount } = await import('../src/key-layout.js');
+ const { statistics } = await import('../src/diagnostics.js');
+ const { parseBMS } = await import('../src/bms.js');
+ const { themes } = await import('../src/themes.js');
+ const c = parseBMS('#BPM 120\n#00016:01\n#00011:01\n#00151:0101\n#00231:01\n#00021:01\n#00022:01\n#00026:01\n#00001:01010101\n#00003:78\n#00004:01');
+ for(const nt of [false,true]) {
+  const s=statistics(c,{nt});
+  assert.equal(playableNoteCount(s,null,false),5);
+  assert.equal(playableNoteCount(s,null,true),8);
+  assert.equal(playableNoteCount(s,themes.Pomu,true),5);
+ }
+});

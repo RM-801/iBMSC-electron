@@ -2,7 +2,7 @@ import { playbackPlan, voiceStart } from "./playback-plan.js";
 import { positionStatus, statusNumber } from "./position-status.js";
 import { defaultColumns } from "./default-columns.js";
 import { gridOffsets } from "./grid-lines.js";
-import { isPomuTheme, pomuColumns, pomuChannels, pomuStatisticsRows, shiftVisibleNotes } from "./key-layout.js";
+import { playableNoteCount, isPomuTheme, pomuColumns, pomuChannels, pomuStatisticsRows, shiftVisibleNotes } from "./key-layout.js";
 import { readPlayerSettings, writePlayerSettings } from "./player-settings.js";
 import { remapClipboardNotes, remapClipboardRows } from "./clipboard-base.js";
 import { writePortableProject, readPortableProject, validateProjectChart } from "./portable-project.js";
@@ -260,7 +260,6 @@ function refresh() {
   document.title = (dirty ? "● " : "") + $("project").textContent + " · iBMSC";
   $("undo").disabled = !history.canUndo;
   $("redo").disabled = !history.canRedo;
-  $("count").textContent = String(renderCache.all.length);
   refreshWAVList();
   $("show2p").checked = showsSecondPlayer(chart);
   rebuildColumns();
@@ -358,6 +357,7 @@ function resetBGMColumns() {
 }
 function rebuildColumns() {
   const pomu = isPomuTheme(currentTheme);
+  $("count").textContent = String(playableNoteCount(statistics(chart, { nt: $("lnstyle").value === "nt" }), currentTheme, showsSecondPlayer(chart)));
   $("secondplayer-option").hidden = pomu;
   $("show2p").disabled = pomu;
   $("show2p").checked = !pomu && showsSecondPlayer(chart);

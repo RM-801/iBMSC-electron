@@ -75,3 +75,11 @@ export function pomuStatisticsRows(stats, theme) {
     { name: "总计", counts: stats.data[5], subtotal: true },
   ];
 }
+
+export function playableNoteCount(stats, theme, double = false) {
+  if (isPomuTheme(theme)) {
+    return pomuColumns.reduce((sum, id) => sum +
+      (id <= 11 ? stats.aLanes[id - 4] : stats.dLanes[id - 13]).counts[5], 0);
+  }
+  return stats.data[2][5] + (double ? stats.data[3][5] : 0);
+}
