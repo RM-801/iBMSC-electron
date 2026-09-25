@@ -1,3 +1,4 @@
+import { playbackPlan, voiceStart } from "./playback-plan.js";
 import { positionStatus, statusNumber } from "./position-status.js";
 import { defaultColumns } from "./default-columns.js";
 import { gridOffsets } from "./grid-lines.js";
@@ -1534,7 +1535,10 @@ async function startPlayback(fromBeat = 0) {
     if (generation !== playGeneration) return;
     const map = timeMap(chart),
       offset = map.beatToSeconds(fromBeat),
-      notes = timeline(chart).filter((n) => n.beat >= fromBeat),
+      notes = playbackPlan(timeline(chart), offset, n => {
+        const name = chart.resources.WAV[n.value];
+        return name && buffers.get(name.toLowerCase().replaceAll("\\", "/"));
+      }),
       start = audio.currentTime + 0.1;
     let next = 0,
       missing = 0,
@@ -1544,22 +1548,20 @@ async function startPlayback(fromBeat = 0) {
       if (generation !== playGeneration) return;
       while (
         next < notes.length &&
-        start + notes[next].time - offset < audio.currentTime + 0.2
+        start + notes[next].at < audio.currentTime + 0.2
       ) {
-        const n = notes[next++],
-          name = chart.resources.WAV[n.value],
-          buffer =
-            name && buffers.get(name.toLowerCase().replaceAll("\\", "/"));
+        const voice = notes[next++], { buffer } = voice;
         if (!buffer) {
           missing++;
           continue;
         }
+        const timing = voiceStart(voice, start, audio.currentTime);
+        if (!timing) continue;
         const source = audio.createBufferSource();
         source.buffer = buffer;
         source.connect(audio.destination);
-        const when = Math.max(audio.currentTime, start + n.time - offset);
-        source.start(when);
-        end = Math.max(end, when + buffer.duration);
+        source.start(timing.when, timing.offset);
+        end = Math.max(end, timing.end);
         sources.push(source);
         source.onended = () => {
           sources = sources.filter((s) => s !== source);
