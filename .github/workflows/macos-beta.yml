@@ -1,0 +1,71 @@
+name: macOS Beta packages
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: macos-beta-release
+  cancel-in-progress: false
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            arch: arm64
+          - runner: macos-15-intel
+            arch: x64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Check and test
+        run: |
+          npm run check
+          npm test
+      - name: Build DMG
+        run: |
+          test "$(node -p process.arch)" = '${{ matrix.arch }}'
+          npm run package:mac
+      - name: Verify mounted application
+        run: node scripts/verify-macos.mjs
+      - name: Prepare release files
+        env:
+          BUILD_ARCH: ${{ matrix.arch }}
+        run: |
+          mkdir release-files
+          cp dist/*.dmg release-files/
+          cd release-files
+          shasum -a 256 *.dmg > "SHA256SUMS-mac-${BUILD_ARCH}.txt"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-${{ matrix.arch }}
+          path: release-files/
+          if-no-files-found: error
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: macos-*
+          merge-multiple: true
+          path: release-files
+      - name: Attach verified DMGs to Beta 1
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release view v0.1.38-beta.1 --json isPrerelease --jq '.isPrerelease' | grep -x true
+          gh release upload v0.1.38-beta.1 release-files/*
