@@ -1,6 +1,7 @@
 import { encodeBMS } from "./bms-encoding.js";
 import { generalDefaults, generalPreferenceIds, validateGeneralSettings } from "./general-settings.js";
 import { createChartNavigation } from "./chart-navigation.js";
+import { createTouchGestures } from "./touch-gestures.js";
 import { prepareBMSExport } from "./bms-export.js";
 import { createFindCriteria, applyFindOperation } from "./find-replace.js";
 import { createFindReplace } from "./find-replace-ui.js";
@@ -389,9 +390,9 @@ function resetChartPositionStatus() {
   for (const key of ["column", "note", "measure", "grid", "reduced", "measurePosition", "absolute", "length", "hidden"])
     ui.raw($("status-" + key), "");
 }
-function rebuildColumns() {
+function rebuildColumns(updateCount = true) {
   const pomu = isNineKeyLayout();
-  $("count").textContent = String(playableNoteCount(statistics(chart, { nt: $("lnstyle").value === "nt" }), pomu ? themes.Pomu : null, showsSecondPlayer(chart)));
+  if (updateCount) $("count").textContent = String(playableNoteCount(statistics(chart, { nt: $("lnstyle").value === "nt" }), pomu ? themes.Pomu : null, showsSecondPlayer(chart)));
   const bgm = Math.max(bgmMinimum, maxBGM(chart));
   columns = originalColumns({
     double: pomu || showsSecondPlayer(chart),
@@ -798,9 +799,9 @@ canvas.onpointerdown = (e) => {
     writePointer = { currentTarget: e.currentTarget, clientX: e.clientX, clientY: e.clientY };
 
   }
-  e.currentTarget.setPointerCapture(e.pointerId);
+  if (!e.deferredTouch) e.currentTarget.setPointerCapture(e.pointerId);
   const mode = $("tool").value;
-  if (mode !== "write" && !found) {
+  if (mode !== "write" && (!found || (mode === "time" && e.deferredTouch))) {
     $("measure").value = String(p.measure);
     $("measure").onchange();
     if (!e.ctrlKey && !e.metaKey) selectedIds.clear();
@@ -1295,7 +1296,9 @@ function changeEditorZoom(percent, focusPane = null, anchorX = 0, anchorY = 0) {
   });
   editorZoom = next;
   scale = Number($("zoom").value) * 48 * editorZoom;
-  refresh();
+  // Zoom changes geometry only. Keep chart indexes, form edits and audio intact.
+  rebuildColumns(false);
+  setScrollExtent(scrollEndBeat(chart));
   panes.forEach((p, i) => {
     const position = positions[i];
     p.view.scrollLeft = Math.max(0, Math.min(contentWidth - p.view.clientWidth,
@@ -1787,21 +1790,97 @@ navigation = createChartNavigation({ panes, options: () => ({ ...generalOptions,
   tool: $("tool").value, middleRelease: visualNumber(currentTheme, "MiddleDeltaRelease", 1) }),
   scale: () => scale, height: () => height, activate: pane => { keyboardPane = pane; },
   draw, stopPreview: () => keyPreview.stop() });
+const touchHandlers = new Map(panes.map(p => [p.canvas, {
+  down: p.canvas.onpointerdown, move: p.canvas.onpointermove,
+  up: p.canvas.onpointerup, cancel: p.canvas.onpointercancel,
+}]));
+let touchSelection = null, touchZoom = 100, touchZoomChanged = false;
+function panTouch(target, dx, dy) {
+  const pane = panes.find(p => p.canvas === target);
+  pane.view.scrollLeft = Math.max(0, Math.min(Math.max(0, contentWidth - pane.view.clientWidth), pane.view.scrollLeft + dx));
+  pane.view.scrollTop = Math.max(0, Math.min(Math.max(0, height - pane.view.clientHeight), pane.view.scrollTop + dy));
+  // Synchronize locked panes immediately, before another pinch event changes scale.
+  pane.view.onscroll();
+}
+const touchNavigation = createTouchGestures({
+  focus(e) {
+    navigation.stop();
+    keyboardPane = panes.find(p => p.canvas === e.currentTarget);
+    e.currentTarget.focus?.({ preventScroll: true });
+    touchZoom = editorZoom * 100;
+  },
+  canEdit(e) {
+    const p = location(e);
+    if (!p) return false;
+    // A held edit must be a preview until release; immediate writes remain taps.
+    return $("tool").value !== "write" || Boolean(hit(p)) ||
+      ($("lnstyle").value === "nt" && columns[p.lane].id >= 4 && columns[p.lane].id <= 20);
+  },
+  beginEdit(e) {
+    touchSelection = { selected, ids: new Set(selectedIds), timeStatus: { ...timeStatus },
+      measure: $("measure").value, pasteTarget };
+    if (generalOptions.clickstop) keyPreview.stop();
+    touchHandlers.get(e.currentTarget).down(e);
+  },
+  moveEdit: e => touchHandlers.get(e.currentTarget).move(e),
+  endEdit(e) {
+    touchHandlers.get(e.currentTarget).up(e);
+    touchSelection = null;
+    writePointer = null;
+    draw();
+  },
+  cancelEdit(e) {
+    touchHandlers.get(e.currentTarget).cancel();
+    if (touchSelection) {
+      selected = touchSelection.selected;
+      selectedIds = touchSelection.ids;
+      timeStatus = touchSelection.timeStatus;
+      $("measure").value = touchSelection.measure;
+      $("measure").onchange();
+      pasteTarget = touchSelection.pasteTarget;
+      touchSelection = null;
+      draw();
+    }
+  },
+  pan: panTouch,
+  transform(target, ratio, previous, next) {
+    const pane = panes.find(p => p.canvas === target), rect = pane.view.getBoundingClientRect();
+    touchZoom = Math.max(50, Math.min(300, touchZoom * ratio));
+    const before = editorZoom;
+    changeEditorZoom(touchZoom, pane, previous.x - rect.left, previous.y - rect.top);
+    touchZoomChanged ||= before !== editorZoom;
+    panTouch(target, previous.x - next.x, previous.y - next.y);
+  },
+  finishNavigation() {
+    if (touchZoomChanged) persistPreferences();
+    touchZoomChanged = false;
+  },
+});
 for (const pane of panes) {
   pane.canvas.tabIndex = 0;
   for (const [event, handler] of [["onpointerdown", "down"], ["onpointermove", "move"],
     ["onpointerup", "up"], ["oncontextmenu", "context"]]) {
     const original = pane.canvas[event];
-    pane.canvas[event] = e => { if (!navigation[handler](e)) return original(e); };
+    pane.canvas[event] = e => {
+      if (touchNavigation[handler](e)) return;
+      if (!navigation[handler](e)) return original(e);
+    };
   }
+  const cancel = pane.canvas.onpointercancel;
+  pane.canvas.onpointercancel = e => {
+    if (e && touchNavigation.cancel(e)) return;
+    cancel(e);
+  };
+  pane.canvas.addEventListener("lostpointercapture", e => touchNavigation.cancel(e));
   pane.canvas.addEventListener("pointerenter", e => navigation.enter(e));
   pane.canvas.addEventListener("pointercancel", () => navigation.stop());
 }
-window.addEventListener("blur", () => navigation.stop());
+window.addEventListener("blur", () => { navigation.stop(); touchNavigation.stop(); });
 window.addEventListener("pointermove", e => {
   if (navigation.isAuto() && !panes.some(pane => pane.canvas === e.target)) navigation.move(e);
 });
 window.addEventListener("pointerdown", e => {
+  if (!panes.some(pane => pane.canvas === e.target)) touchNavigation.stop();
   if (navigation.isAuto() && !panes.some(pane => pane.canvas === e.target)) {
     navigation.stop(); e.preventDefault(); e.stopImmediatePropagation();
   }
@@ -1810,7 +1889,7 @@ window.addEventListener("wheel", e => {
   if (navigation.isAuto() && !panes.some(pane => pane.view.contains?.(e.target))) navigation.stop();
 }, { passive: true });
 window.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") navigation.stop();
+  if (e.key === "Escape") { navigation.stop(); touchNavigation.stop(); }
   if (e.key === "Escape" && viewMenuOpen) {
     e.preventDefault();
     closeViewMenu();

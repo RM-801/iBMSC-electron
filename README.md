@@ -32,6 +32,8 @@ The web version starts in your browser language, falls back to English for unsup
 2. Use **F2 / F3** for the select / write tools, **F5 / F7** to play / stop, and **Ctrl + mouse wheel** to zoom the editor.
 3. Charts are saved as **UTF-8** by default. Choose **Shift-JIS** for older players such as LR2. PMS charts automatically use the Pomu nine-key skin and default to the `.pms` extension.
 
+On touchscreens (web): swipe with one finger to pan, pinch with two fingers to zoom. Tap to select or insert with the active tool; hold, then drag to select a region or move notes.
+
 ## Beta notes
 
 - Test with copies of your charts first. Some original features and compatibility with older project files are still being refined.

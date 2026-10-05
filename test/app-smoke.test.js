@@ -13,6 +13,13 @@ test("controller initializes and routes document edits, history, columns and sou
     handlers = {};
   let paintCalls = null;
   const intervals = [];
+  const timeouts = [];
+  const holdTouch = () => {
+    const timer = timeouts.findLast(t => t.milliseconds === 450 && !t.cleared);
+    assert.ok(timer, "a touch hold is pending");
+    timer.cleared = true;
+    timer.callback();
+  };
   class Element {
     constructor(tag = "div") {
       this.tagName = tag.toUpperCase();
@@ -132,6 +139,8 @@ test("controller initializes and routes document edits, history, columns and sou
     "devicePixelRatio",
     "setInterval",
     "clearInterval",
+    "setTimeout",
+    "clearTimeout",
     "requestAnimationFrame",
     "cancelAnimationFrame",
     "confirm",
@@ -153,6 +162,8 @@ test("controller initializes and routes document edits, history, columns and sou
       devicePixelRatio: 1,
       setInterval: (callback, milliseconds) => { intervals.push({ callback, milliseconds }); return intervals.length; },
       clearInterval: id => { if (intervals[id - 1]) intervals[id - 1].cleared = true; },
+      setTimeout: (callback, milliseconds) => { timeouts.push({ callback, milliseconds }); return timeouts.length; },
+      clearTimeout: id => { if (timeouts[id - 1]) timeouts[id - 1].cleared = true; },
       requestAnimationFrame: () => 0,
       cancelAnimationFrame: () => {},
       confirm: () => true,
@@ -746,6 +757,70 @@ test("controller initializes and routes document edits, history, columns and sou
       clientY: 425,
       pointerId: 1,
     };
+    const touch = { ...pointer, pointerType: "touch", preventDefault() {} };
+    const bottom = () => Number.parseFloat(nodes.get("scrollspace").style.height) - view.clientHeight;
+    const resetTouchView = () => { view.scrollLeft = 0; view.scrollTop = bottom(); view.onscroll(); };
+    const initialTitle = document.title;
+    canvas.onpointerdown(touch);
+    canvas.onpointermove({ ...touch, clientY: 480 });
+    canvas.onpointerup({ ...touch, clientY: 480 });
+    assert.equal(view.scrollTop, bottom() - 55, "one finger pans instead of writing");
+    assert.equal(nodes.get("count").textContent, "0");
+    assert.equal(document.title, initialTitle);
+    assert.equal(nodes.get("undo").disabled, true);
+    resetTouchView();
+    canvas.onpointerdown(touch); canvas.onpointerup(touch);
+    assert.equal(nodes.get("count").textContent, "1", "a tap writes once even on the first touch");
+    canvas.oncontextmenu({ ...touch, button: 2 });
+    assert.equal(nodes.get("count").textContent, "1", "touch context menu never deletes");
+    nodes.get("undo").click();
+    resetTouchView();
+    canvas.onpointerdown(touch); holdTouch();
+    canvas.onpointermove({ ...touch, clientY: 329 });
+    const secondTouch = { ...touch, pointerId: 2, clientX: touch.clientX + 80, clientY: 329 };
+    canvas.onpointerdown(secondTouch);
+    canvas.onpointermove({ ...secondTouch, clientX: secondTouch.clientX + 80 });
+    assert.equal(Number(nodes.get("editorzoom").value), 200, "pinch scales the whole editor");
+    canvas.onpointerup({ ...secondTouch, clientX: secondTouch.clientX + 80 });
+    canvas.onpointermove({ ...touch, clientY: 300 });
+    canvas.onpointerup({ ...touch, clientY: 300 });
+    assert.equal(nodes.get("count").textContent, "0", "pinch cancels pending long-note edits");
+    assert.equal(nodes.get("undo").disabled, true);
+    assert.equal(JSON.parse(localStorage.getItem("ibmsc-preferences")).Grid.EditorZoom, "200");
+    nodes.get("editorzoom").value = "100"; nodes.get("editorzoom").onchange();
+    resetTouchView();
+    // Immediate-write lanes and BMSE must also wait for a tap before mutating.
+    const bgmIndex = nodes.get("laneheads").children.findIndex(n => n.textContent === "B1");
+    const bgmX = pointerWidths.slice(0, bgmIndex).reduce((a, b) => a + b, 0) + 5;
+    const bgmTouch = { ...touch, clientX: bgmX };
+    canvas.onpointerdown(bgmTouch);
+    canvas.onpointermove({ ...bgmTouch, clientY: 470 });
+    canvas.onpointerup({ ...bgmTouch, clientY: 470 });
+    assert.equal(nodes.get("undo").disabled, true);
+    resetTouchView();
+    canvas.onpointerdown(touch); canvas.onpointerup(touch);
+    nodes.get("tool-select").click();
+    const boxStart = { ...touch, clientX: pointerX - 25, clientY: 395 };
+    const boxEnd = { ...touch, clientX: pointerX + 25, clientY: 440 };
+    canvas.onpointerdown(boxStart); holdTouch();
+    canvas.onpointermove(boxEnd); canvas.onpointerup(boxEnd);
+    nodes.get("deletenotes").click();
+    assert.equal(nodes.get("count").textContent, "0", "holding blank space then dragging selects notes for deletion");
+    nodes.get("undo").click();
+    nodes.get("sourceopen").click();
+    const beforeTouchMove = events(parseBMS(nodes.get("source").value))[0].channel;
+    nodes.get("sourcecancel").click();
+    canvas.onpointerdown(touch); holdTouch();
+    const movedTouch = { ...touch, clientX: pointerX + pointerWidths[pointerColumn] };
+    canvas.onpointermove(movedTouch); canvas.onpointerup(movedTouch);
+    nodes.get("sourceopen").click();
+    assert.notEqual(events(parseBMS(nodes.get("source").value))[0].channel, beforeTouchMove, "hold then drag moves a note");
+    nodes.get("sourcecancel").click();
+    nodes.get("undo").click();
+    nodes.get("undo").click();
+    assert.equal(nodes.get("count").textContent, "0");
+    nodes.get("tool-write").click();
+    resetTouchView();
     nodes.get("widthzoom").value = "2";
     nodes.get("widthzoom").onchange();
     canvas.onpointerdown({ ...pointer, clientX: pointer.clientX * 2 });
