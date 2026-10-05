@@ -55,10 +55,8 @@ for (const [key, value] of Object.entries({ CFBundleName: 'iBMSC', CFBundleDispl
 }
 execFileSync('/usr/bin/codesign', ['--force', '--deep', '--sign', '-', bundle], { stdio: 'inherit' });
 execFileSync('/usr/bin/codesign', ['--verify', '--deep', '--strict', bundle], { stdio: 'inherit' });
-const notes = `iBMSC ${pkg.version} — macOS ${arch} 测试包\n\n将 iBMSC.app 拖入 Applications（应用程序）。包内自带 Electron 和 Node 运行环境，无需单独安装。\n打开应用后，通过“打开”选择已解压的谱面，自动读取该谱面目录内的音源（包括 sound 子文件夹）。\n\n本包采用本地临时签名，未进行 Apple Developer ID 签名或公证。若 macOS 阻止打开，可在“系统设置 → 隐私与安全性”中针对该应用选择“仍要打开”；不要关闭系统全局安全保护。\n\n开发中，尚非完整复刻交付版本。支持 BASE16/36/62 BMS；BASE62 区分大小写。非 BASE36 可保存为 BMS 或 .ibmscx 移植版工程，原版 .IBMSC 导出不支持。MyO2 工具箱已接入。内置预览播放音频，不渲染 BGA。建议使用谱面副本验收保存/重开及播放。\n完整功能边界和来源说明见发布页及随包 CREDITS.md；本项目不对上游代码或资源另行授予许可证。\n`;
-await fs.writeFile(path.join(output, '安装与已知限制.txt'), notes);
-await fs.copyFile(path.join(root, 'CREDITS.md'), path.join(output, 'CREDITS.md'));
-await fs.copyFile(path.join(root, 'docs/TODO.md'), path.join(output, 'TODO.md'));
+// Keep the drag-to-install volume limited to the app and destination shortcut.
+// Credits and dependency licenses remain bundled inside iBMSC.app above.
 try { await fs.symlink('/Applications', path.join(output, 'Applications')); } catch (e) { if (e.code !== 'EEXIST') throw e; }
 const dmg = `${output}.dmg`;
 execFileSync('/usr/bin/hdiutil', ['create', '-volname', 'iBMSC', '-srcfolder', output, '-format', 'UDZO', dmg], { stdio: 'inherit' });

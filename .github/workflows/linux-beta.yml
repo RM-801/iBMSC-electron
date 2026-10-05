@@ -1,4 +1,4 @@
-name: macOS Beta packages
+name: Linux Beta packages
 on:
   workflow_dispatch:
     inputs:
@@ -9,19 +9,11 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: macos-beta-release
+  group: linux-beta-release
   cancel-in-progress: false
 jobs:
   build:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - runner: macos-15
-            arch: arm64
-          - runner: macos-15-intel
-            arch: x64
-    runs-on: ${{ matrix.runner }}
+    runs-on: ubuntu-22.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
@@ -36,6 +28,10 @@ jobs:
         env:
           RELEASE_TAG: ${{ inputs.release_tag }}
         run: node -e 'const p=require("./package.json"); if (!process.env.RELEASE_TAG.startsWith("v"+p.version+"-beta.")) throw Error("Release tag/version mismatch")'
+      - name: Install system libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb libgtk-3-0 libnss3 libasound2 libgbm1 libfuse2 desktop-file-utils
       - name: Install dependencies
         run: |
           npm ci
@@ -44,23 +40,19 @@ jobs:
         run: |
           npm run check
           npm test
-      - name: Build DMG
-        run: |
-          test "$(node -p process.arch)" = '${{ matrix.arch }}'
-          npm run package:mac
-      - name: Verify mounted application
-        run: node scripts/verify-macos.mjs
+      - name: Build AppImage and Debian package
+        run: npm run package:linux
+      - name: Verify packages and application startup
+        run: node scripts/verify-linux.mjs
       - name: Prepare release files
-        env:
-          BUILD_ARCH: ${{ matrix.arch }}
         run: |
           mkdir release-files
-          cp dist/*.dmg release-files/
+          cp dist/linux-*/iBMSC-*.AppImage dist/linux-*/iBMSC-*.deb release-files/
           cd release-files
-          shasum -a 256 *.dmg > "SHA256SUMS-mac-${BUILD_ARCH}.txt"
+          sha256sum *.AppImage *.deb > SHA256SUMS-linux-x64.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: macos-${{ matrix.arch }}
+          name: linux-x64
           path: release-files/
           if-no-files-found: error
   publish:
@@ -71,10 +63,9 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          pattern: macos-*
-          merge-multiple: true
+          name: linux-x64
           path: release-files
-      - name: Attach verified DMGs to draft beta
+      - name: Attach verified Linux packages to draft beta
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}

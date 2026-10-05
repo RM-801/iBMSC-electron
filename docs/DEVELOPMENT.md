@@ -50,11 +50,22 @@ npm run package:mac
 node scripts/verify-macos.mjs
 ```
 
-产物位于 `dist/`。脚本拒绝覆盖已有输出目录；Windows 安装版和便携版可通过 `-- <新输出目录>` 指定其他目录。
+在 Linux x64 上：
 
-[macOS Beta 工作流](../.github/workflows/macos-beta.yml) 在 Apple Silicon 和 Intel runner 上运行测试、构建、DMG 校验、签名完整性与挂载启动检查，全部通过后上传到指定 Beta Release。当前工作流目标固定为 `v0.1.38-beta.1`；发布其他版本前需更新目标，且不会覆盖已有附件。
+```sh
+npm run package:linux
+node scripts/verify-linux.mjs
+```
 
-Windows 包未签名；macOS 包使用 ad-hoc 签名，未进行 Developer ID 签名或公证。自动更新和 Linux 成品尚未提供。
+Linux 验证需要 `xvfb`、`desktop-file-utils` 和 `dpkg-deb`，以及 Electron 所需的 GTK、NSS、ALSA、GBM 等系统库。AppImage 与 DEB 输出至 `dist/linux-<版本>/`。
+
+产物位于 `dist/`。脚本拒绝覆盖已有输出目录；Windows 安装版、便携版和 Linux 包可通过 `-- <新输出目录>` 指定其他目录。
+
+[macOS Beta 工作流](../.github/workflows/macos-beta.yml) 在 Apple Silicon 和 Intel runner 上运行测试、构建、DMG 内容与签名校验、挂载启动检查。[Linux Beta 工作流](../.github/workflows/linux-beta.yml) 在 Ubuntu 22.04 x64 上运行测试、构建 AppImage/DEB，并验证包内容和启动。
+
+两者由 `release_tag` 指定已创建的草稿 Beta 标签，源码从该标签检出并核对版本；全部通过后将附件上传至草稿，不覆盖已有附件。最终核对各平台产物和校验和后再公开 Release。
+
+Windows 包未签名；macOS 包使用 ad-hoc 签名，未进行 Developer ID 签名或公证。自动更新尚未接入。Linux 发行版兼容性和各平台实际声音输出仍需实机验收。
 
 ## 网页部署
 

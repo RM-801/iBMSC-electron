@@ -1,6 +1,6 @@
 {
   "name": "ibmsc-node",
-  "version": "0.1.38",
+  "version": "0.1.39",
   "private": true,
   "type": "module",
   "main": "electron/main.cjs",
@@ -12,7 +12,8 @@
     "package:mac": "node scripts/package-macos.mjs",
     "package:win": "node scripts/package-windows.mjs",
     "package:win:portable": "node scripts/package-portable.mjs",
-    "package:win:installer": "node scripts/package-installer.mjs"
+    "package:win:installer": "node scripts/package-installer.mjs",
+    "package:linux": "node scripts/package-linux.mjs"
   },
   "engines": {
     "node": ">=22"

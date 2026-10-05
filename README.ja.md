@@ -13,20 +13,22 @@
 
 [ブラウザーで使う](https://rm-801.github.io/iBMSC-electron/) · 音源を読み込むには、音声ファイルまたはフォルダーを選択してください。
 
-現在のバージョン：[Beta 1 · 0.1.38](https://github.com/RM-801/iBMSC-electron/releases/tag/v0.1.38-beta.1)
+現在のバージョン：[Beta 2 · 0.1.39](https://github.com/RM-801/iBMSC-electron/releases/tag/v0.1.39-beta.2)
 
 | バージョン | 使用方法 |
 | --- | --- |
-| [Windows x64 インストーラー版](https://github.com/RM-801/iBMSC-electron/releases/download/v0.1.38-beta.1/iBMSC-0.1.38-setup-x64.exe) | インストーラーを実行してください。 |
-| [Windows x64 ポータブル版](https://github.com/RM-801/iBMSC-electron/releases/download/v0.1.38-beta.1/iBMSC-0.1.38-portable-x64.exe) | インストール不要。ダブルクリックで起動できます。 |
-| [macOS Apple Silicon](https://github.com/RM-801/iBMSC-electron/releases/download/v0.1.38-beta.1/iBMSC-0.1.38-mac-arm64.dmg) | M シリーズの Mac 用。DMG を開き、アプリを Applications にドラッグしてください。 |
-| [macOS Intel](https://github.com/RM-801/iBMSC-electron/releases/download/v0.1.38-beta.1/iBMSC-0.1.38-mac-x64.dmg) | Intel Mac 用。DMG を開き、アプリを Applications にドラッグしてください。 |
+| [Windows x64 インストーラー版](https://github.com/RM-801/iBMSC-electron/releases/download/v0.1.39-beta.2/iBMSC-0.1.39-setup-x64.exe) | インストーラーを実行してください。 |
+| [Windows x64 ポータブル版](https://github.com/RM-801/iBMSC-electron/releases/download/v0.1.39-beta.2/iBMSC-0.1.39-portable-x64.exe) | インストール不要。ダブルクリックで起動できます。 |
+| [macOS Apple Silicon](https://github.com/RM-801/iBMSC-electron/releases/download/v0.1.39-beta.2/iBMSC-0.1.39-mac-arm64.dmg) | M シリーズの Mac 用。DMG を開き、アプリを Applications にドラッグしてください。 |
+| [macOS Intel](https://github.com/RM-801/iBMSC-electron/releases/download/v0.1.39-beta.2/iBMSC-0.1.39-mac-x64.dmg) | Intel Mac 用。DMG を開き、アプリを Applications にドラッグしてください。 |
+| [Linux x64 AppImage](https://github.com/RM-801/iBMSC-electron/releases/download/v0.1.39-beta.2/iBMSC-0.1.39-linux-x64.AppImage) | ファイルの実行を許可してから起動してください。 |
+| [Linux x64 DEB](https://github.com/RM-801/iBMSC-electron/releases/download/v0.1.39-beta.2/iBMSC-0.1.39-linux-x64.deb) | `.deb` 対応のシステムで、ソフトウェアインストーラーから開いてください。 |
 
-Node.js のインストールは不要です。更新時は新しいバージョンを手動でダウンロードしてください。Linux 版はまだ提供していません。Windows 版は未署名、macOS 版は Apple の公証を受けていません。
+Node.js のインストールは不要です。更新時は新しいバージョンを手動でダウンロードしてください。Linux 版は現在 x64 のみで、ARM 版はまだ提供していません。Windows 版は未署名、macOS 版は Apple の公証を受けていません。
 
 ## 使い始める
 
-Web 版は初回起動時にブラウザーの言語を使用し、未対応の言語では英語になります。手動で選んだ言語は保存されます。デスクトップ版のシステム言語対応は次回リリースで追加予定です。
+初回起動時はシステムまたはブラウザーの言語を使用し、未対応の言語では英語になります。手動で選んだ言語は保存されます。
 
 1. 展開済みの譜面を開き、音源は譜面と同じフォルダーやサブフォルダーに残してください。Web 版では **WAV → 音源の読込状況 → 音源フォルダーを選択** からそのフォルダーを選ぶと、譜面のキー音を読み込めます。
 2. **F2 / F3** で選択／書き込みツールを切り替え、**F5 / F7** で再生／停止、**Ctrl＋マウスホイール** で編集エリアを拡大・縮小できます。
@@ -40,6 +42,6 @@ Web 版のタッチ操作：1 本指でスワイプして移動、2 本指でピ
 - `LNTYPE 2` には未対応です。内蔵プレビューでは BGA の画像・動画は表示されません。条件分岐は元の記述を保持しますが、評価・実行はしません。
 - GBK の譜面は、読み込み時に文字コードを明示的に選択してください。自動判別は保証されません。
 
-[リリースノート](docs/releases/v0.1.38-beta.1.md) · [不具合の報告](https://github.com/RM-801/iBMSC-electron/issues)（バージョン、OS、再現手順を添えてください）
+[リリースノート](docs/releases/v0.1.39-beta.2.md) · [不具合の報告](https://github.com/RM-801/iBMSC-electron/issues)（バージョン、OS、再現手順を添えてください）
 
 原作：**iBMS / iBMS.[4th Age]**。本プロジェクトは開発・保守を引き継ぐ派生版です。[原作者・貢献者と権利表記](CREDITS.md) · [第三者ソフトウェアに関する表記](THIRD_PARTY_NOTICES.md) · [開発者向けドキュメント](docs/DEVELOPMENT.md)

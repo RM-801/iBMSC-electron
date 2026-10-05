@@ -296,6 +296,7 @@ function create() {
   installMenu();
   win = new BrowserWindow({
     ...(process.platform === "win32" ? { icon: path.join(__dirname, "../assets/app/ibmsc.ico") } : {}),
+    ...(process.platform === "linux" ? { icon: path.join(__dirname, "../assets/app/ibmsc.png") } : {}),
     show: false,
     width: 1440,
     height: 960,

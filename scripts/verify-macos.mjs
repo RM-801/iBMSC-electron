@@ -12,11 +12,21 @@ await fs.mkdir(mount);
 execFileSync('/usr/bin/hdiutil', ['verify', dmg], { stdio: 'inherit' });
 execFileSync('/usr/bin/hdiutil', ['attach', dmg, '-readonly', '-nobrowse', '-mountpoint', mount], { stdio: 'inherit' });
 try {
+  // Finder may add hidden volume metadata, but no other visible files belong
+  // beside the app and the drag-to-install destination.
+  const visibleEntries = (await fs.readdir(mount)).filter(name => !name.startsWith('.')).sort();
+  assert.deepEqual(visibleEntries, ['Applications', 'iBMSC.app']);
+  const applications = path.join(mount, 'Applications');
+  assert.equal((await fs.lstat(applications)).isSymbolicLink(), true);
+  assert.equal(await fs.readlink(applications), '/Applications');
   const bundle = path.join(mount, 'iBMSC.app');
+  assert.equal((await fs.lstat(bundle)).isDirectory(), true);
   execFileSync('/usr/bin/codesign', ['--verify', '--deep', '--strict', bundle], { stdio: 'inherit' });
   const resources = path.join(bundle, 'Contents/Resources');
-  for (const file of ['electron/main.cjs', 'src/app.js', 'index.html', 'CREDITS.md'])
+  for (const file of ['electron/main.cjs', 'src/app.js', 'index.html', 'CREDITS.md', 'UPSTREAM-README.md', 'THIRD_PARTY_NOTICES.md'])
     assert.deepEqual(await fs.readFile(path.join(resources, 'app', file)), await fs.readFile(file));
+  for (const file of ['LICENSE', 'LICENSES.chromium.html'])
+    assert.deepEqual(await fs.readFile(path.join(resources, file)), await fs.readFile(path.join('node_modules/electron/dist', file)));
   const ico = await fs.readFile('assets/app/ibmsc.ico');
   const png = ico.subarray(ico.readUInt32LE(18), ico.readUInt32LE(18) + ico.readUInt32LE(14));
   assert.deepEqual((await fs.readFile(path.join(resources, 'iBMSC.icns'))).subarray(16), png);
