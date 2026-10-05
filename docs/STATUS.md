@@ -1,3 +1,9 @@
+## GitHub Pages 与使用入口（2026-10-05）
+
+仓库已改名为 [RM-801/iBMSC-electron](https://github.com/RM-801/iBMSC-electron)。[网页版](https://rm-801.github.io/iBMSC-electron/) 已部署并设为仓库主页；中、英、日、韩 README 均提供在线入口和桌面版下载。源码运行与构建说明移至 [DEVELOPMENT.md](DEVELOPMENT.md)。
+
+[部署工作流](https://github.com/RM-801/iBMSC-electron/actions/runs/37293408790) 成功；公开页面、脚本、样式及图标均返回 HTTP 200，浏览器中编辑器完成初始化，控制台无错误。本次检查仅确认线上加载，完整文件和音频流程继续按验收清单核对。
+
 ## macOS Beta 1 已补充发布（2026-10-05）
 
 Apple Silicon / Intel DMG 已加入 v0.1.38-beta.1。两种架构分别通过 270/270 测试、签名完整性、镜像校验及挂载启动检查。构建记录：https://github.com/RM-801/iBMSC-electron/actions/runs/37277838791 。使用临时签名，未公证；真实音频及完整交互仍待验收。下方 macOS“尚未构建/重验”的旧记录由本次结果更新。README 已重写为用户入口，包含各平台下载、使用、限制及源码构建说明。
@@ -53,4 +59,4 @@ MyO2 已重新纳入维护范围，包含恒速化和格线检查/调整。其�
 - 目录外音源及原版 MCI 支持的所有格式未承诺兼容；真实音频输出、延迟、长曲/大谱性能和播放器互操作仍需素材验收。
 - Windows 保存窗口/文件关联与完整制谱流程仍需用户验收；已有界面和启动证据不能替代这些结果。
 - 旧记录中有 macOS Apple Silicon 构建/测试结果；0.1.37 未在 macOS 重验。Linux、Intel Mac、各平台声音与分发流程仍待验证，不能宣称全平台已通过。
-- GitHub Pages 试用站尚未部署。正式发行的签名、公证及上游资源分发事项仍在待办中；当前版本为测试包。
+- 正式发行的签名、公证及上游资源分发事项仍在待办中；当前版本为测试包。
