@@ -39,6 +39,7 @@ import { waveformClock, waveformSample } from "./wave-overlay.js";
 import { columnStyle, paintNote, paintNoteLabel, noteColor } from "./note-render.js";
 import { decodeXML } from "./text-encoding.js";
 import { locales } from "./locales.js";
+import { defaultLanguage, languageIds, initialLanguagePreferences } from "./language-preferences.js";
 import {
   updateSettingsDocument,
   migrateLayoutPreferences,
@@ -2990,10 +2991,10 @@ function applyLanguage(id, custom = null) {
     button.setAttribute("aria-checked", String(!custom && button.dataset.language === ui.language));
   syncNativeMenuState();
 }
-for (const [id, locale] of Object.entries(locales)) {
+for (const id of languageIds) {
   const o = document.createElement("option");
   o.value = id;
-  o.textContent = locale.name;
+  o.textContent = locales[id].name;
   $("language").append(o);
 }
 function populateChoiceMenu(id, choices, choose, selected) {
@@ -3015,9 +3016,9 @@ function populateChoiceMenu(id, choices, choose, selected) {
   }
 }
 for (const menu of ["language-menu", "languagepopover"])
-  populateChoiceMenu(menu, Object.entries(locales).map(([id, locale]) => [id, locale.name]), value => {
+  populateChoiceMenu(menu, languageIds.map(id => [id, locales[id].name]), value => {
     $("language").value = value; $("language").onchange();
-  }, () => $("language").value || "chs");
+  }, () => $("language").value || defaultLanguage);
 $("language-toggle").onclick = event => {
   event.preventDefault();
   closeMainMenus(); closeViewMenu(false);
@@ -3469,13 +3470,13 @@ function drawNoteLabel(ctx, col, timeY, text, long = false) {
   });
 }
 
-// Restore language after all UI controls have been registered.
-try {
-  const saved = JSON.parse(localStorage.getItem("ibmsc-language") || "null");
-  if (saved && locales[saved.id]) {
-    $("language").value = saved.id;
-    applyLanguage(saved.id, saved.values && typeof saved.values === "object" ? saved.values : null);
-  }
-} catch { /* Ignore invalid saved preferences. */ }
+// Apply the saved choice or system language after all controls are registered.
+let languageStorage;
+try { languageStorage = window.localStorage || globalThis.localStorage; } catch { /* Storage may be blocked. */ }
+const initialLanguage = await initialLanguagePreferences({
+  storage: languageStorage, navigator: window.navigator, desktop: window.desktop,
+});
+$("language").value = initialLanguage.id;
+applyLanguage(initialLanguage.id, initialLanguage.values);
 
 window.desktop?.onOpenFile?.(token => openNativeFile(null, null, null, token));

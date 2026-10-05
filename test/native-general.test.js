@@ -12,7 +12,7 @@ const executable = path.join(root, "iBMSC.exe");
 const scores = path.join(root, "scores");
 const otherScores = path.join(root, "other");
 
-async function mainHarness({ argv = [executable], lock = true } = {}) {
+async function mainHarness({ argv = [executable], lock = true, preferredLanguages = ["ja-JP", "en-US"], locale = "en-US" } = {}) {
   const handlers = new Map(),
     events = new Map(),
     notices = [],
@@ -55,6 +55,10 @@ async function mainHarness({ argv = [executable], lock = true } = {}) {
             on: (name, fn) => events.set(name, fn),
             isPackaged: true,
             getPath: () => dirname,
+            ...(preferredLanguages === null ? {} : {
+              getPreferredSystemLanguages: () => preferredLanguages,
+            }),
+            getLocale: () => locale,
             setPath() {},
             requestSingleInstanceLock: () => {
               locked++;
@@ -112,6 +116,21 @@ async function mainHarness({ argv = [executable], lock = true } = {}) {
     counts: () => ({ beeps, focused, quit, locked }),
   };
 }
+
+test("system languages IPC preserves OS preference order and only accepts the editor frame", async () => {
+  const app = await mainHarness();
+  const languages = app.handlers.get("app:languages");
+  assert.deepEqual(await languages(app.event), ["ja-JP", "en-US"]);
+  await assert.rejects(languages({ sender: {} }), /拒绝/);
+  await assert.rejects(languages({
+    sender: app.event.sender,
+    senderFrame: { url: app.event.senderFrame.url },
+  }), /拒绝/);
+  for (const preferredLanguages of [[], null]) {
+    const fallback = await mainHarness({ preferredLanguages, locale: "ko-KR" });
+    assert.deepEqual(Array.from(await fallback.handlers.get("app:languages")(fallback.event)), ["ko-KR"]);
+  }
+});
 
 test("association and beep IPC are inert at startup and only accept the trusted editor frame", async () => {
   const app = await mainHarness();
@@ -225,6 +244,7 @@ test("preload exposes platform capabilities and waits for the open callback befo
             removeListener: (name) => listeners.delete(name),
             invoke: async (...args) => {
               calls.push(args);
+              if (args[0] === "app:languages") return ["ja-JP", "en-US"];
             },
           },
         };
@@ -244,6 +264,8 @@ test("preload exposes platform capabilities and waits for the open callback befo
     ])
       assert.equal(Object.hasOwn(desktop, removed), false, removed);
     assert.deepEqual(calls, []);
+    assert.deepEqual(await desktop.systemLanguages(), ["ja-JP", "en-US"]);
+    assert.deepEqual(calls.pop(), ["app:languages"]);
     let release;
     const pending = new Promise((resolve) => {
       release = resolve;

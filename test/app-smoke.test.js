@@ -158,6 +158,12 @@ test("controller initializes and routes document edits, history, columns and sou
       confirm: () => true,
     });
     await import("../src/app.js");
+    assert.equal(nodes.get("language").value, "eng", "English is the fallback without a system language");
+    assert.equal(nodes.get("language-menu").children.find(n => n["aria-checked"] === "true").dataset.language, "eng");
+    assert.deepEqual(nodes.get("language-menu").children.map(n => n.dataset.language), ["eng", "chs", "jpn", "kor"]);
+    assert.equal(localStorage.getItem("ibmsc-language"), null, "automatic language selection is not saved as a manual choice");
+    nodes.get("language").value = "chs";
+    nodes.get("language").onchange();
     const modeChoices = () => nodes.get("chartmode").children.map(n => [n.value, n.textContent]);
     const modernChoices = [["SINGLE", "SINGLE"], ["DOUBLE", "DOUBLE"], ["PMS", "PMS"]];
     const chooseMode = mode => { nodes.get("chartmode").value = mode; nodes.get("chartmode").onchange(); };

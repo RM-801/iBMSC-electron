@@ -1,6 +1,7 @@
 import { locales } from "./locales.js";
 import { uiTranslations } from "./ui-translations.js";
 import { formatMessage } from "./messages.js";
+import { defaultLanguage, languageIds } from "./language-preferences.js";
 
 const clean = (text) => text.replaceAll("&", "").replace(/\s+/g, " ").trim();
 function parts(text) {
@@ -39,9 +40,9 @@ for (const [label, key] of [
 ])
   originalKeys.set(label, "SubMenu/ShowHide/" + key);
 
-export function createTranslator(language = "chs", custom = null) {
-  if (!locales[language]) language = "chs";
-  const locale = locales[language] || locales.chs;
+export function createTranslator(language = defaultLanguage, custom = null) {
+  if (!languageIds.includes(language)) language = defaultLanguage;
+  const locale = locales[language];
   return (source, ...values) => {
     const message = formatMessage(source, language, values);
     if (message !== null) return message;
@@ -68,7 +69,7 @@ export function createTranslator(language = "chs", custom = null) {
 // Capture only UI nodes present at startup (and explicitly registered dynamic UI).
 // Never scan runtime chart titles, paths, resource lists, or editor text for words.
 export function createLocalization(root) {
-  let language = "chs",
+  let language = defaultLanguage,
     custom = null,
     translate = createTranslator();
   const bindings = new Map();
@@ -152,7 +153,7 @@ export function createLocalization(root) {
       return language;
     },
     setLanguage(next, imported = null) {
-      language = locales[next] ? next : "chs";
+      language = languageIds.includes(next) ? next : defaultLanguage;
       custom = imported;
       translate = createTranslator(language, custom);
       prune();

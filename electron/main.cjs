@@ -89,6 +89,11 @@ ipcMain.handle(
   }),
 );
 ipcMain.handle("app:website", checked(() => shell.openExternal("https://github.com/RM-801/iBMSC-electron/releases")));
+function systemLanguages() {
+  const preferred = app.getPreferredSystemLanguages?.();
+  return preferred?.length ? preferred : [app.getLocale()];
+}
+ipcMain.handle("app:languages", checked(systemLanguages));
 ipcMain.handle("app:beep", checked(() => { shell.beep(); return true; }));
 ipcMain.handle("app:associateFile", checked(extension => require("./file-association.cjs").associateFile(extension, {
   isPackaged: app.isPackaged, openExternal: url => shell.openExternal(url),
@@ -336,6 +341,9 @@ function create() {
 }
 app.whenReady().then(async () => {
   if (!ownsInstance) return;
+  const { createTranslator } = await import("../src/localization.js");
+  const { detectLanguage } = await import("../src/language-preferences.js");
+  translateUI = createTranslator(detectLanguage(systemLanguages()));
   recent = new (require("./recent.cjs").RecentFiles)(
     path.join(app.getPath("userData"), "recent-files.json"),
   );

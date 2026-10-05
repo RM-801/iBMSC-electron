@@ -1,41 +1,43 @@
 # iBMSC
 
-**简体中文** · [English](README.en.md) · [日本語](README.ja.md) · [한국어](README.ko.md)
+**English** · [简体中文](README.zh-CN.md) · [日本語](README.ja.md) · [한국어](README.ko.md)
 
-基于 **Electron** 框架的免费跨平台 **BMS / PMS** 谱面编辑器，源代码公开。移植自 [iBMSC 3.0.5 Delta](https://github.com/aqtq314/iBMSC)，由 **SeaRay** 维护。
+A free, cross-platform **BMS / PMS** chart editor built with **Electron**, with publicly available source code. Ported from [iBMSC 3.0.5 Delta](https://github.com/aqtq314/iBMSC) and maintained by **SeaRay**.
 
-- 支持 SINGLE、DOUBLE 和 PMS 九键谱面。
-- 提供 NT / BMSE 输入、长音符编辑和内置音频预览。
-- 支持查找替换、统计、MyO2 工具及自定义皮肤。
-- 界面提供中文、日语、英语和韩语。
+- Edit SINGLE, DOUBLE, and nine-key PMS charts.
+- Use NT / BMSE input modes, long-note editing, and built-in audio preview.
+- Find and replace notes, view statistics, use MyO2 tools, and customize skins.
+- Available in English, Simplified Chinese, Japanese, and Korean.
 
-## 下载
+## Download
 
-[在线使用](https://rm-801.github.io/iBMSC-electron/) · 直接在浏览器中打开；加载音源时需选择对应文件或文件夹。
+[Open in your browser](https://rm-801.github.io/iBMSC-electron/) · Select the audio files or their folder to load keysounds.
 
-当前版本：[Beta 1 · 0.1.38](https://github.com/RM-801/iBMSC-electron/releases/tag/v0.1.38-beta.1)
+Current version: [Beta 1 · 0.1.38](https://github.com/RM-801/iBMSC-electron/releases/tag/v0.1.38-beta.1)
 
-| 版本 | 使用方式 |
+| Edition | Getting started |
 | --- | --- |
-| [Windows x64 安装版](https://github.com/RM-801/iBMSC-electron/releases/download/v0.1.38-beta.1/iBMSC-0.1.38-setup-x64.exe) | 运行安装程序。 |
-| [Windows x64 便携版](https://github.com/RM-801/iBMSC-electron/releases/download/v0.1.38-beta.1/iBMSC-0.1.38-portable-x64.exe) | 无需安装，双击运行。 |
-| [macOS Apple Silicon](https://github.com/RM-801/iBMSC-electron/releases/download/v0.1.38-beta.1/iBMSC-0.1.38-mac-arm64.dmg) | M 系列 Mac；打开 DMG，将应用拖入 Applications。 |
-| [macOS Intel](https://github.com/RM-801/iBMSC-electron/releases/download/v0.1.38-beta.1/iBMSC-0.1.38-mac-x64.dmg) | Intel Mac；打开 DMG，将应用拖入 Applications。 |
+| [Windows x64 installer](https://github.com/RM-801/iBMSC-electron/releases/download/v0.1.38-beta.1/iBMSC-0.1.38-setup-x64.exe) | Run the installer. |
+| [Windows x64 portable](https://github.com/RM-801/iBMSC-electron/releases/download/v0.1.38-beta.1/iBMSC-0.1.38-portable-x64.exe) | Double-click to run; no installation required. |
+| [macOS Apple Silicon](https://github.com/RM-801/iBMSC-electron/releases/download/v0.1.38-beta.1/iBMSC-0.1.38-mac-arm64.dmg) | For M-series Macs. Open the DMG and drag the app into Applications. |
+| [macOS Intel](https://github.com/RM-801/iBMSC-electron/releases/download/v0.1.38-beta.1/iBMSC-0.1.38-mac-x64.dmg) | For Intel Macs. Open the DMG and drag the app into Applications. |
 
-无需安装 Node.js。更新需手动下载新版本；Linux 安装包暂未提供。Windows 包未签名，macOS 包未经过 Apple 公证。
+Node.js is not required. Download new versions manually to update. Linux packages are not yet available. Windows packages are unsigned; macOS packages are not notarized by Apple.
 
-## 开始使用
+## Quick start
 
-1. 打开已解压的谱面，保留谱面目录及子目录中的音源，程序会按 WAV 定义关联。
-2. **F2 / F3** 切换选择 / 写入工具，**F5 / F7** 播放 / 停止，**Ctrl＋滚轮** 缩放编辑区。
-3. 保存默认使用 **UTF-8**；兼容 LR2 等旧播放器时可选择 **Shift-JIS**。PMS 自动使用 Pomu 九键皮肤，默认保存为 `.pms`。
+The web version starts in your browser language, falls back to English for unsupported languages, and remembers your manual choice. System-language detection for the desktop app is coming in the next release.
 
-## Beta 注意事项
+1. Extract your chart files before opening them. Keep audio files in the chart folder and its subfolders; the editor resolves them from the chart's WAV definitions.
+2. Use **F2 / F3** for the select / write tools, **F5 / F7** to play / stop, and **Ctrl + mouse wheel** to zoom the editor.
+3. Charts are saved as **UTF-8** by default. Choose **Shift-JIS** for older players such as LR2. PMS charts automatically use the Pomu nine-key skin and default to the `.pms` extension.
 
-- 请先用谱面副本测试。部分原版功能和旧工程兼容仍在完善中。
-- 暂不支持 `LNTYPE 2`；内置预览不显示 BGA 图片 / 视频；条件分支只保留原文，不展开执行。
-- GBK 谱面需显式选择读取编码，不能保证自动识别。
+## Beta notes
 
-[完整发布说明](docs/releases/v0.1.38-beta.1.md) · [反馈问题](https://github.com/RM-801/iBMSC-electron/issues)（请附版本、系统和复现步骤）
+- Test with copies of your charts first. Some original features and compatibility with older project files are still being refined.
+- `LNTYPE 2` is not supported. Built-in preview does not display BGA images or videos. Conditional directives are preserved as text but are not evaluated.
+- For GBK charts, select the input encoding explicitly; automatic detection is not guaranteed.
 
-原作：**iBMS / iBMS.[4th Age]**。本项目为后续维护分支。[原作与贡献者、授权说明](CREDITS.md) · [第三方声明](THIRD_PARTY_NOTICES.md) · [开发文档](docs/DEVELOPMENT.md)
+[Full release notes](docs/releases/v0.1.38-beta.1.md) · [Report an issue](https://github.com/RM-801/iBMSC-electron/issues) (include the app version, operating system, and steps to reproduce)
+
+Original authors: **iBMS / iBMS.[4th Age]**. This project continues development as a maintained fork. [Credits and licensing notes](CREDITS.md) · [Third-party notices](THIRD_PARTY_NOTICES.md) · [Developer documentation](docs/DEVELOPMENT.md)

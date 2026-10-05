@@ -2,6 +2,7 @@ const { contextBridge, ipcRenderer, webUtils } = require("electron");
 contextBridge.exposeInMainWorld("desktop", {
   nativeMenu: process.platform === "darwin",
   nativePlatform: process.platform,
+  systemLanguages: () => ipcRenderer.invoke("app:languages"),
   capabilities: { fileAssociation: process.platform === "win32", beep: true },
   beep: () => ipcRenderer.invoke("app:beep"),
   associateFile: (extension) =>

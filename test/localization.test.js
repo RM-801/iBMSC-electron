@@ -96,7 +96,7 @@ test("custom theme controls switch language without changing column titles or fo
   const option = byId("themeedit-column").childNodes[4];
   const before = editor.read();
   const colorsLegend = nodes.find(
-    (node) => node.tagName === "LEGEND" && node.textContent === "颜色",
+    (node) => node.tagName === "LEGEND" && node.textContent === "Colors",
   );
   for (const language of ["jpn", "eng", "kor", "chs"]) {
     ui.setLanguage(language);
