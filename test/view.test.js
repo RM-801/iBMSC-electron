@@ -146,3 +146,17 @@ test("pointer round snapping is symmetric across DPI, scale and scroll", async (
       }
     }
 });
+
+test("whole-editor zoom retains note/grid hit positions at fractional DPI", async () => {
+  const { displayedBeatY, pointerPosition } = await import("../src/view.js");
+  const starts = measureStarts(parseBMS("#00102:0.75"));
+  for (const zoom of [0.5, 1, 1.1, 1.75, 2, 3]) for (const pixelRatio of [1, 1.25, 2]) {
+    const rendered = { height: 8025 * zoom, top: 603.25, scale: 192 * zoom, bottomInset: 20 * zoom, pixelRatio };
+    const rect = { top: 70.5, height: 605 }, bitmap = Math.round(rect.height * pixelRatio);
+    for (const beat of [0, 1, 4, 5.25, 7]) {
+      const clientY = rect.top + displayedBeatY(rendered, beat) * rect.height * pixelRatio / bitmap;
+      const position = pointerPosition(starts, rendered, rect, bitmap, clientY, 16, true);
+      assert.equal(starts[position.measure] + position.slot / position.division * (starts[position.measure+1] - starts[position.measure]), beat);
+    }
+  }
+});

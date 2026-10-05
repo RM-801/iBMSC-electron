@@ -2,6 +2,7 @@
 import { test } from "node:test";
 import { parseBMS, events } from "../src/bms.js";
 import assert from "node:assert/strict";
+import { createTranslator } from "../src/localization.js";
 import { readFile } from "node:fs/promises";
 test("controller initializes and routes document edits, history, columns and source actions", async () => {
   const html = await readFile(
@@ -10,6 +11,8 @@ test("controller initializes and routes document edits, history, columns and sou
     ),
     nodes = new Map(),
     handlers = {};
+  let paintCalls = null;
+  const intervals = [];
   class Element {
     constructor(tag = "div") {
       this.tagName = tag.toUpperCase();
@@ -52,12 +55,12 @@ test("controller initializes and routes document edits, history, columns and sou
       return new Proxy(
         {},
         {
-          get: (_, key) =>
+          get: (context, key) =>
             key === "measureText"
               ? text => ({ width: text.length * 6, actualBoundingBoxAscent: 8, actualBoundingBoxDescent: 2, actualBoundingBoxLeft: 0, actualBoundingBoxRight: text.length * 6 })
               : key === "createLinearGradient"
               ? () => ({ addColorStop() {} })
-              : () => {},
+              : (...args) => { if (paintCalls) paintCalls.push({ canvas: this.id, op: key, args, fill: context.fillStyle, stroke: context.strokeStyle, font: context.font }); },
         },
       );
     }
@@ -65,13 +68,20 @@ test("controller initializes and routes document edits, history, columns and sou
       return {
         left: 0,
         top: 0,
+        bottom: this.clientHeight,
         width: this.clientWidth,
         height: this.clientHeight,
       };
     }
-    addEventListener(name, fn) {
+    addEventListener(name, fn, options) {
+      this["event-options-" + name] = options;
       this["event-" + name] = fn;
     }
+    focus() { document.activeElement = this; }
+    querySelector() { return null; }
+    querySelectorAll() { return []; }
+    showPopover() { this.popoverOpen = true; }
+    hidePopover() { this.popoverOpen = false; }
     showModal() {
       this.open = true;
     }
@@ -80,7 +90,7 @@ test("controller initializes and routes document edits, history, columns and sou
     }
     click() {
       if (!this.disabled)
-        return this.onclick?.({ currentTarget: this, target: this });
+        return this.onclick?.({ currentTarget: this, target: this, preventDefault() {} });
     }
     setPointerCapture() {}
   }
@@ -106,6 +116,7 @@ test("controller initializes and routes document edits, history, columns and sou
       nodes.get(m[1]).value = o[1].match(/value="([^"]*)"/)?.[1] ?? o[2].trim();
   }
   const document = {
+    body: new Element("body"),
     getElementById: (id) => nodes.get(id),
     createElement: (tag) => new Element(tag),
     querySelectorAll: () => [],
@@ -114,6 +125,7 @@ test("controller initializes and routes document edits, history, columns and sou
   };
   const prior = {};
   for (const key of [
+    "localStorage",
     "document",
     "window",
     "ResizeObserver",
@@ -128,32 +140,146 @@ test("controller initializes and routes document edits, history, columns and sou
     prior[key] = globalThis[key];
   try {
     Object.assign(globalThis, {
+      localStorage: { data: new Map([["ibmsc-preferences", JSON.stringify({ Player: { UseExternalPreview: "True" } })]]), getItem(key) { return this.data.get(key) ?? null; }, setItem(key,value) { this.data.set(key,String(value)); } },
       document,
       window: {
         innerWidth: 1280,
+        innerHeight: 800,
         addEventListener: (name, fn) => (handlers[name] = fn),
       },
       ResizeObserver: class {
         observe() {}
       },
       devicePixelRatio: 1,
-      setInterval: () => 0,
-      clearInterval: () => {},
+      setInterval: (callback, milliseconds) => { intervals.push({ callback, milliseconds }); return intervals.length; },
+      clearInterval: id => { if (intervals[id - 1]) intervals[id - 1].cleared = true; },
       requestAnimationFrame: () => 0,
       cancelAnimationFrame: () => {},
       confirm: () => true,
     });
     await import("../src/app.js");
+    const modeChoices = () => nodes.get("chartmode").children.map(n => [n.value, n.textContent]);
+    const modernChoices = [["SINGLE", "SINGLE"], ["DOUBLE", "DOUBLE"], ["PMS", "PMS"]];
+    const chooseMode = mode => { nodes.get("chartmode").value = mode; nodes.get("chartmode").onchange(); };
+    const sourceHeaders = () => { nodes.get("sourceopen").click(); const result = parseBMS(nodes.get("source").value).headers; nodes.get("sourcecancel").click(); return result; };
+    assert.equal(nodes.has("header-PLAYER"), false);
+    assert.equal(nodes.get("chartmode").value, "SINGLE");
+    assert.deepEqual(modeChoices(), modernChoices);
+    assert.equal(sourceHeaders().PLAYER, "1");
     assert.equal(Number(nodes.get("zoom").value), 4);
+    assert.equal(nodes.has("show2p"), false);
+    assert.equal(nodes.get("theme").value, "IIDX");
+    assert.equal(nodes.get("laneheads").style.color, "rgba(0,255,0,1)");
+    assert.ok(nodes.get("theme").children.every(option => option.value !== ""));
+    assert.equal(nodes.get("verticaloff").checked, true);
+    assert.equal(nodes.get("previewclick").checked, true);
+    // View changes update the UI and preferences without editing the chart/history.
+    const titleBeforeView = document.title;
+    const undoBeforeView = nodes.get("undo").disabled;
+    for (const [flag, target] of [["show-menu", "main-menu-bar"], ["show-toolbar", "main-toolbar"],
+      ["show-options", "options-panel"], ["show-status", "status-bar"]]) {
+      nodes.get(flag).checked = false; nodes.get(flag).onchange();
+      assert.equal(nodes.get(target).hidden, true);
+      nodes.get(flag)["event-change"]();
+    }
+    assert.equal(nodes.get("options-resizer").hidden, true);
+    const savedViews = JSON.parse(localStorage.getItem("ibmsc-preferences")).ShowHide;
+    for (const key of ["showMenu", "showTB", "showOpPanel", "showStatus"])
+      assert.equal(savedViews[key], "False");
+    const viewKey = key => handlers.keydown({ key, target: nodes.get("chart"), preventDefault() {} });
+    viewKey("F10");
+    assert.equal(nodes.get("viewmenu").popoverOpen, true, "hidden toolbar remains recoverable");
+    viewKey("Escape");
+    assert.equal(nodes.get("viewmenu").popoverOpen, false);
+    for (const flag of ["show-menu", "show-toolbar", "show-options", "show-status"]) {
+      nodes.get(flag).checked = true; nodes.get(flag).onchange();
+    }
+    nodes.get("toggle-options").click();
+    assert.equal(nodes.get("show-options").checked, false);
+    nodes.get("toggle-options").click();
+    assert.equal(nodes.get("options-panel").hidden, false);
+    nodes.get("view-toggle").click();
+    assert.equal(nodes.get("viewmenu").popoverOpen, true);
+    nodes.get("view-toggle").click();
+    assert.equal(nodes.get("viewmenu").popoverOpen, false);
+    // Blank-canvas right click does nothing; note deletion is covered below.
+    nodes.get("chart").oncontextmenu({ currentTarget: nodes.get("chart"), clientX: 600,
+      clientY: 100, preventDefault() {} });
+    assert.equal(nodes.get("viewmenu").popoverOpen, false);
+    nodes.get("showcolumncaption").checked = false; nodes.get("showcolumncaption").onchange();
+    for (const id of ["laneheads", "heads-left", "heads-right"]) assert.equal(nodes.get(id).hidden, true);
+    nodes.get("showcolumncaption").checked = true; nodes.get("showcolumncaption").onchange();
+    const savedViewTop = nodes.get("viewport").scrollTop;
+    nodes.get("viewport").scrollTop -= nodes.get("viewport").clientHeight;
+    const visualFlags = ["showgrid", "showsubgrid", "showbackground", "showmeasureindex", "showmeasureline", "showvertical"];
+    for (const flag of visualFlags) nodes.get(flag).checked = false;
+    paintCalls = []; nodes.get("showbackground").onchange();
+    assert.equal(paintCalls.filter(c => c.op === "fillRect").length, 1, "canvas base is always painted");
+    assert.equal(paintCalls.filter(c => ["stroke", "fillText"].includes(c.op)).length, 0);
+    for (const [flag, operation] of [["showgrid", "stroke"], ["showsubgrid", "stroke"],
+      ["showmeasureline", "stroke"], ["showvertical", "stroke"], ["showmeasureindex", "fillText"]]) {
+      nodes.get(flag).checked = true;
+      paintCalls = []; nodes.get(flag).onchange();
+      assert.ok(paintCalls.some(c => c.op === operation), flag + " works independently");
+      nodes.get(flag).checked = false;
+    }
+    nodes.get("showbackground").checked = true;
+    paintCalls = []; nodes.get("showbackground").onchange();
+    assert.ok(paintCalls.filter(c => c.op === "fillRect").length > 1, "lane backgrounds return");
+    paintCalls = null;
+    for (const flag of visualFlags) nodes.get(flag).checked = true;
+    nodes.get("showgrid").onchange();
+    nodes.get("viewport").scrollTop = savedViewTop;
+    assert.equal(document.title, titleBeforeView);
+    assert.equal(nodes.get("undo").disabled, undoBeforeView);
+    // Existing movement scenarios explicitly enable vertical movement.
+    nodes.get("verticaloff").checked = false;
     nodes.get("theme").value = "IIDX";
     nodes.get("theme").onchange();
     for (const id of ["laneheads", "heads-left", "heads-right"]) {
       assert.equal(nodes.get(id).style.color, "rgba(0,255,0,1)");
       assert.equal(nodes.get(id).style.backgroundColor, "rgba(0,0,0,1)");
     }
-    nodes.get("theme").value = "";
+    nodes.get("displaysettings").click();
+    nodes.get("themeedit-ok").click();
+    assert.equal(nodes.get("theme").value, "IIDX", "unchanged preset stays a preset");
+    nodes.get("theme").value = "IIDX";
     nodes.get("theme").onchange();
-    assert.equal(nodes.get("laneheads").style.backgroundColor, "#000");
+    assert.equal(nodes.get("laneheads").style.backgroundColor, "rgba(0,0,0,1)");
+    // Theme drafts never touch the document, and Cancel discards every edit.
+    nodes.get("sourceopen").click();
+    const documentBeforeTheme = nodes.get("source").value;
+    nodes.get("sourcedialog").close();
+    nodes.get("displaysettings").click();
+    nodes.get("themeedit-column-Width").value = "95";
+    nodes.get("themeedit-column-Width").oninput();
+    nodes.get("themeedit-cancel").click();
+    assert.equal(nodes.get("theme").value, "IIDX");
+    assert.equal(JSON.parse(localStorage.getItem("ibmsc-theme")).columns[4].Width, "60");
+    nodes.get("displaysettings").click();
+    assert.notEqual(Number(nodes.get("themeedit-column-Width").value), 95);
+    nodes.get("themeedit-column-Width").value = "1000";
+    nodes.get("themeedit-ok").click();
+    assert.equal(nodes.get("displaysettingsdialog").open, true);
+    assert.equal(nodes.get("themeedit-error").hidden, false);
+    assert.equal(JSON.parse(localStorage.getItem("ibmsc-theme")).columns[4].Width, "60");
+    nodes.get("themeedit-column-Width").value = "95";
+    nodes.get("themeedit-column-Title").value = "My lane";
+    nodes.get("themeedit-ColumnTitle").value = "#123456";
+    nodes.get("themeedit-ok").click();
+    assert.equal(nodes.get("displaysettingsdialog").open, false);
+    assert.equal(nodes.get("theme").value, "custom");
+    const custom = JSON.parse(localStorage.getItem("ibmsc-custom-theme"));
+    assert.equal(Number(custom.columns[4].Width), 95);
+    assert.equal(custom.columns[4].Title, "My lane");
+    assert.equal(nodes.get("laneheads").style.color, "rgba(18,52,86,1)");
+    nodes.get("theme").value = "IIDX"; nodes.get("theme").onchange();
+    nodes.get("theme").value = "custom"; nodes.get("theme").onchange();
+    assert.equal(nodes.get("laneheads").style.color, "rgba(18,52,86,1)");
+    nodes.get("sourceopen").click();
+    assert.equal(nodes.get("source").value, documentBeforeTheme);
+    nodes.get("sourcedialog").close();
+    nodes.get("theme").value = "IIDX"; nodes.get("theme").onchange();
     const widthBefore = nodes.get("laneheads").style.gridTemplateColumns;
     nodes.get("widthzoom").value = "2";
     nodes.get("widthzoom").onchange();
@@ -195,18 +321,35 @@ test("controller initializes and routes document edits, history, columns and sou
     nodes.get("redo").click();
     assert.equal(nodes.get("expansion").value, extra);
     nodes.get("undo").click();
+    // Opening a BMS exposes extension directives, then edits/undo update the saved text.
+    nodes.get("source").value = "* HEADER FIELD\n#TITLE Test\n#BMP01 movie.mpg\n#CUSTOM first\n#CUSTOM second\n#001D1:0100\n#00004:01\n";
+    nodes.get("sourceapply").click();
+    const importedExpansion = "#BMP01 movie.mpg\n#CUSTOM first\n#CUSTOM second\n#001D1:0100";
+    assert.equal(nodes.get("expansion").value, importedExpansion);
+    const editedExpansion = importedExpansion.replace("#BMP01 movie.mpg\n", "");
+    nodes.get("expansion").value = editedExpansion;
+    nodes.get("expansion").oninput();
+    nodes.get("expansion").onblur();
+    nodes.get("sourceopen").click();
+    assert.ok(!nodes.get("source").value.includes("#BMP01"));
+    assert.ok(nodes.get("source").value.indexOf("#CUSTOM first") < nodes.get("source").value.indexOf("#00004:01"));
+    nodes.get("sourcecancel").click();
+    nodes.get("undo").click();
+    assert.equal(nodes.get("expansion").value, importedExpansion);
+    nodes.get("redo").click();
+    assert.equal(nodes.get("expansion").value, editedExpansion);
+    nodes.get("undo").click();
+    nodes.get("undo").click();
+    assert.equal(nodes.get("expansion").value, expansionBefore);
     const browseModes = [];
     window.desktop = { chooseSounds: async multiple => { browseModes.push(multiple); return []; } };
     await nodes.get("samples").ondblclick();
     await nodes.get("wavbrowse").click();
     assert.deepEqual(browseModes, [false, true]);
     delete window.desktop;
-    nodes.get("playersettings").click();
-    assert.equal(nodes.get("playersettingsdialog").open, true);
-    nodes.get("playersettingsdialog").close();
     nodes.get("toggleln").click();
     assert.equal(nodes.get("lnstyle").value, "bmse");
-    assert.match(nodes.get("toggleln").textContent, /BMSE/);
+    assert.equal(nodes.get("toggleln")["aria-checked"], "false");
     nodes.get("toggleln").click();
     assert.equal(nodes.get("lnstyle").value, "nt");
     nodes.get("statistics").click();
@@ -215,8 +358,8 @@ test("controller initializes and routes document edits, history, columns and sou
     assert.deepEqual(nodes.get("statstable").children.slice(3,11).map(row=>row.children[0].textContent),
       ["A1","A2","A3","A4","A5","A6","A7","A8"]);
     nodes.get("reportclose").click();
-    nodes.get("header-PLAYER").value = "3";
-    nodes.get("header-PLAYER").onchange();
+    nodes.get("chartmode").value = "DOUBLE";
+    nodes.get("chartmode").onchange();
     nodes.get("statistics").click();
     assert.equal(nodes.get("statstable").children.length, 23);
     assert.deepEqual(nodes.get("statstable").children.slice(12,20).map(row=>row.children[0].textContent),
@@ -252,21 +395,18 @@ test("controller initializes and routes document edits, history, columns and sou
     assert.ok(
       nodes.get("laneheads").children.some((n) => n.textContent === "B8"),
     );
-    assert.equal(nodes.get("show2p").checked, false);
     assert.ok(Number.parseFloat(nodes.get("scrollspace").style.height) < 3000);
     assert.ok(
       !nodes.get("laneheads").children.some((n) => n.textContent === "D1"),
     );
-    nodes.get("header-PLAYER").value = "3";
-    nodes.get("header-PLAYER").onchange();
-    assert.equal(nodes.get("show2p").checked, true);
+    nodes.get("chartmode").value = "DOUBLE";
+    nodes.get("chartmode").onchange();
     assert.ok(
       nodes.get("laneheads").children.some((n) => n.textContent === "D8"),
     );
     nodes.get("undo").click();
-    assert.equal(nodes.get("show2p").checked, false);
 
-    for (const name of ["PLAYER", "RANK", "DIFFICULTY"])
+    for (const name of ["RANK", "DIFFICULTY"])
       assert.equal(nodes.get("header-" + name).tagName, "SELECT");
     nodes.get("header-RANK").value = "0";
     nodes.get("header-RANK").onchange();
@@ -288,6 +428,31 @@ test("controller initializes and routes document edits, history, columns and sou
     );
     nodes.get("bgmcount").value = "15";
     nodes.get("bgmcount").onchange();
+    // The view field follows final rendered lanes, but automatic fill is not a saved minimum.
+    const visibleBgm = () => nodes.get("laneheads").children.filter(n => /^B[0-9]+$/.test(n.textContent)).length;
+    const savedBgmViewTitle = document.title;
+    const savedBgmViewUndo = nodes.get("undo").disabled;
+    nodes.get("viewport").clientWidth = 1900;
+    nodes.get("widthzoom").onchange();
+    assert.ok(visibleBgm() > 15);
+    assert.equal(Number(nodes.get("bgmcount").value), visibleBgm());
+    nodes.get("showcolumncaption")["event-change"]();
+    assert.equal(JSON.parse(localStorage.getItem("ibmsc-preferences")).Grid.gCol, "15");
+    nodes.get("viewport").clientWidth = 700;
+    nodes.get("widthzoom").onchange();
+    assert.equal(Number(nodes.get("bgmcount").value), 15, "shrinking restores the configured minimum");
+    nodes.get("widthzoom").value = "0.25";
+    nodes.get("widthzoom").onchange();
+    assert.ok(visibleBgm() > 15);
+    assert.equal(Number(nodes.get("bgmcount").value), visibleBgm());
+    nodes.get("widthzoom").value = "1";
+    nodes.get("widthzoom").onchange();
+    assert.equal(Number(nodes.get("bgmcount").value), 15);
+    assert.equal(document.title, savedBgmViewTitle);
+    assert.equal(nodes.get("undo").disabled, savedBgmViewUndo);
+    let numberKeyPrevented = false;
+    nodes.get("viewmenu")["event-keydown"]({key:"ArrowUp", target:{type:"number"}, preventDefault(){numberKeyPrevented=true;}});
+    assert.equal(numberKeyPrevented, false, "view menu leaves number spin keys to the input");
     assert.equal(nodes.get("samples").children.length, 1295);
     assert.equal(nodes.get("samples").children.at(-1).value, "ZZ");
     const key = (value, extra = {}) =>
@@ -343,8 +508,8 @@ test("controller initializes and routes document edits, history, columns and sou
     assert.equal(nodes.get("count").textContent, "0");
     nodes.get("undo").click();
     assert.equal(nodes.get("count").textContent, "2");
-    nodes.get("show2p").checked = false;
-    nodes.get("show2p").onchange();
+    nodes.get("chartmode").value = "SINGLE";
+    nodes.get("chartmode").onchange();
     assert.equal(
       nodes.get("laneheads").children.some((n) => n.textContent === "D1"),
       false,
@@ -363,8 +528,9 @@ test("controller initializes and routes document edits, history, columns and sou
     const save = nodes.get("save").click();
     nodes.get("title").value = "Edited during save";
     nodes.get("title").onchange();
-    finishSave({ name: "Smoke.bms" });
+    finishSave({ name: "Smoke.bms", encoding: "shift_jis" });
     await save;
+    assert.equal(nodes.get("encoding").value, "shift_jis");
     assert.equal(document.title.startsWith("●"), true);
     const tokens = [];
     window.desktop = {
@@ -382,6 +548,7 @@ test("controller initializes and routes document edits, history, columns and sou
     };
     await nodes.get("open").click();
     assert.equal(nodes.get("project").textContent, "Recent");
+    assert.equal(nodes.get("encoding").value, "utf8");
     assert.deepEqual(tokens, ["accepted", "cancel:accepted"]);
     assert.equal(nodes.get("recentfiles").children.length, 1);
     window.desktop.open = async () => ({
@@ -391,13 +558,28 @@ test("controller initializes and routes document edits, history, columns and sou
     });
     await nodes.get("open").click();
     assert.equal(nodes.get("project").textContent, "Recent");
+    assert.equal(nodes.get("encoding").value, "utf8");
     assert.deepEqual(tokens, [
       "accepted",
       "cancel:accepted",
       "cancel:rejected",
     ]);
-    const requestedAssets = [];
+    const requestedAssets = [], auditionVoices = [];
     globalThis.AudioContext = class {
+      destination = {};
+      currentTime = 0;
+      async resume() {}
+      createBuffer(channels, length, sampleRate) {
+        const data = Array.from({ length: channels }, () => new Float32Array(length));
+        return { numberOfChannels: channels, length, sampleRate, duration: length / sampleRate,
+          copyToChannel(samples, channel) { data[channel].set(samples); },
+          getChannelData(channel) { return data[channel]; } };
+      }
+      createBufferSource() {
+        const voice = { stops: 0, starts: [], connect() {}, disconnect() {}, start(...args) { this.starts.push(args); }, stop() { this.stops++; } };
+        auditionVoices.push(voice);
+        return voice;
+      }
       async decodeAudioData(bytes) {
         return {
           bytes,
@@ -449,6 +631,48 @@ test("controller initializes and routes document edits, history, columns and sou
       nodes.get("samples").children[0].textContent.includes("kick.wav"),
     );
 
+    // Legacy external-preview preferences cannot redirect toolbar or F5/F6/F7 playback.
+    nodes.get("source").value = "#BPM 120\n#WAV01 sound\\kick.wav\n#00011:01\n#00111:01";
+    nodes.get("sourceapply").click();
+    nodes.get("measure").value = "1";
+    const checkPlayback = async (trigger, beat) => {
+      const before = auditionVoices.length;
+      await trigger();
+      await new Promise(resolve => setImmediate(resolve));
+      assert.equal(auditionVoices.length, before + 1, "built-in audio schedules a voice");
+      assert.deepEqual(auditionVoices.at(-1).starts, [[0.1, 0]]);
+      assert.equal(nodes.get("playstatus").textContent, "播放中，从第 " + beat.toFixed(3) + " 拍开始");
+      viewKey("F7");
+      assert.equal(auditionVoices.at(-1).stops, 1);
+      assert.equal(nodes.get("playstatus").textContent, "");
+    };
+    await checkPlayback(() => nodes.get("play").click(), 0);
+    await checkPlayback(() => nodes.get("playhere").click(), 4);
+    await checkPlayback(() => viewKey("F5"), 0);
+    await checkPlayback(() => viewKey("F6"), 4);
+
+    // Real compressed bytes must load even though the native decoder rejects ADPCM.
+    // This covers the desktop PMS path, browser file association and waveform input.
+    const adpcm = Buffer.from("524946463600000057415645666d74201a0000000200010044ac00008858010008000400080004000100000100006461746108000000001000e803840312", "hex");
+    const nativeDecode = AudioContext.prototype.decodeAudioData;
+    AudioContext.prototype.decodeAudioData = () => { throw Error("Native ADPCM unsupported"); };
+    window.desktop.open = async () => ({ name: "compressed.pms", token: "adpcm",
+      bytes: new TextEncoder().encode("#BPM 120\n#WAV01 sample.wav\n#00011:01") });
+    window.desktop.asset = async () => new Uint8Array(adpcm);
+    await nodes.get("open").click();
+    assert.equal(nodes.get("soundstatus").textContent, "音源已关联：1 个；未能加载：0 个");
+    assert.equal(nodes.get("sounderrors").hidden, true);
+    assert.ok(nodes.get("samples").children[0].textContent.includes("✓"));
+    const adpcmFile = { name: "sample.wav", size: adpcm.length,
+      arrayBuffer: async () => new Uint8Array(adpcm).buffer };
+    nodes.get("sounds").files = [adpcmFile];
+    await nodes.get("sounds").onchange();
+    assert.equal(nodes.get("status").textContent, "已加载 1 个音源；失败 0 个");
+    nodes.get("wavefile").files = [adpcmFile];
+    await nodes.get("wavefile").onchange();
+    assert.equal(nodes.get("overlayname").textContent, "sample.wav");
+    AudioContext.prototype.decodeAudioData = nativeDecode;
+
     delete window.desktop;
     const droppedFile = {
       name: "dropped.bms",
@@ -487,11 +711,14 @@ test("controller initializes and routes document edits, history, columns and sou
     nodes.get("bgmcount").value = "8";
     nodes.get("bgmcount").onchange();
     assert.equal(Number(nodes.get("bgmcount").value), 23);
+    nodes.get("bgmcount")["event-change"]();
+    assert.equal(JSON.parse(localStorage.getItem("ibmsc-preferences")).Grid.gCol, "8");
     await handlers.drop({
       dataTransfer: { files: [droppedFile] },
       preventDefault() {},
     });
-    assert.equal(Number(nodes.get("bgmcount").value), 15);
+    assert.equal(Number(nodes.get("bgmcount").value), 8);
+    nodes.get("bgmcount").value = "15"; nodes.get("bgmcount").onchange();
     await nodes.get("new").click();
     assert.equal(nodes.get("soundstatus").textContent, "");
     assert.equal(nodes.get("sounderrors").hidden, true);
@@ -502,10 +729,14 @@ test("controller initializes and routes document edits, history, columns and sou
       view.clientHeight;
     view.onscroll();
     nodes.get("tool").value = "write";
+    canvas.focus();
+    const pointerWidths = nodes.get("laneheads").style.gridTemplateColumns.split(" ").map(parseFloat);
+    const pointerColumn = nodes.get("laneheads").children.findIndex(n => n.textContent === "A2");
+    const pointerX = pointerWidths.slice(0, pointerColumn).reduce((a, b) => a + b, 0) + pointerWidths[pointerColumn] / 2;
     const pointer = {
       button: 0,
       currentTarget: canvas,
-      clientX: 215,
+      clientX: pointerX,
       clientY: 425,
       pointerId: 1,
     };
@@ -608,7 +839,6 @@ test("controller initializes and routes document edits, history, columns and sou
     assert.equal(nodes.get("measurelist").children[1].textContent, "001: 1 ( 4 / 4 )");
     nodes.get("source").value = "#PLAYER 1\n#03211:01";
     nodes.get("sourceapply").click();
-    assert.equal(nodes.get("show2p").checked, false);
     assert.ok(
       Math.abs(
         Number.parseFloat(nodes.get("scrollspace").style.height) -
@@ -727,21 +957,133 @@ test("controller initializes and routes document edits, history, columns and sou
     assert.equal(base62Saved.resources.WAV['0a'], 'lower.ogg');
     assert.equal(base62Saved.resources.WAV.zz, 'last.ogg');
     assert.deepEqual(events(base62Saved).map(e=>e.value), ['0A','0a']);
-    nodes.get("findvalue").value = "0a";
-    nodes.get("findchannel").value = "11";
-    nodes.get("replacevalue").value = "zz";
-    nodes.get("replaceall").click();
+    nodes.get("findopen").click();
+    assert.equal(nodes.get("find-label-to").value, "zz");
+    nodes.get("find-label-from").value = "0a";
+    nodes.get("find-label-to").value = "0a";
+    nodes.get("find-columns-none").click();
+    nodes.get("find-column-5").click();
+    nodes.get("find-select").click();
+    nodes.get("copynotes").click();
+    assert.equal(nodes.get("status").textContent, "已复制 1 个音符");
+    nodes.get("find-delete").click();
+    nodes.get("sourceopen").click();
+    assert.deepEqual(events(parseBMS(nodes.get("source").value)).map(e=>e.value), ['0A']);
+    nodes.get("sourcedialog").close();
+    nodes.get("undo").click();
+    nodes.get("find-label-replacement").value = "zz";
+    nodes.get("find-replace-label").click();
+    nodes.get("findclose").click();
     await nodes.get("save").onclick();
     assert.deepEqual(events(parseBMS(savedRequest.text)).map(e=>e.value), ['0A','zz']);
     nodes.get("undo").click();
     await nodes.get("save").onclick();
     assert.deepEqual(events(parseBMS(savedRequest.text)).map(e=>e.value), ['0A','0a']);
 
+    // Ctrl+F offers explicit selected-note deletion separately from original live filtering.
+    const restoreFindChart = savedRequest.text;
+    const setFindFlag = (name, value) => {
+      const control = nodes.get("find-" + name);
+      if (control["aria-pressed"] !== String(value)) control.click();
+    };
+    const findValues = () => {
+      nodes.get("sourceopen").click();
+      const values = events(parseBMS(nodes.get("source").value)).map(n => n.value);
+      nodes.get("sourcedialog").close(); return values;
+    };
+    nodes.get("source").value = "#BPM 120\n#00011:010203";
+    nodes.get("sourceapply").click(); nodes.get("findopen").click();
+    nodes.get("find-label-from").value = "02";
+    nodes.get("find-label-to").value = "02";
+    setFindFlag("selected", false); setFindFlag("unselected", true);
+    nodes.get("find-select").click();
+    assert.equal(nodes.get("status").textContent, "已处理 1 个音符");
+    nodes.get("find-delete").click();
+    assert.equal(nodes.get("status").textContent, "已处理 0 个音符", "matching deletion keeps the original selection filter");
+    assert.deepEqual(findValues(), ["01", "02", "03"]);
+    nodes.get("find-delete-selected").click();
+    assert.deepEqual(findValues(), ["01", "03"], "selected deletion ignores the unselected-only filter");
+    nodes.get("find-delete-selected").click();
+    assert.equal(nodes.get("status").textContent, "已处理 0 个音符");
+    assert.deepEqual(findValues(), ["01", "03"], "empty selection cannot delete unselected notes");
+    nodes.get("undo").click(); assert.deepEqual(findValues(), ["01", "02", "03"]);
+    // The selected action ignores even invalid criteria and an empty column filter.
+    nodes.get("find-select").click();
+    nodes.get("find-label-from").value = "??";
+    nodes.get("find-columns-none").click();
+    nodes.get("find-delete-selected").click();
+    assert.deepEqual(findValues(), ["01", "03"]);
+    nodes.get("undo").click();
+    nodes.get("find-label-from").value = "03"; nodes.get("find-label-to").value = "03";
+    nodes.get("find-column-5").click();
+    nodes.get("find-delete").click();
+    assert.deepEqual(findValues(), ["01", "02"], "direct matching deletion still works without selecting first");
+    nodes.get("findclose").click();
+    nodes.get("source").value = restoreFindChart; nodes.get("sourceapply").click();
+    setFindFlag("selected", true);
+    nodes.get("find-label-from").value = "01"; nodes.get("find-label-to").value = "zz";
+
     nodes.get("saveformat").value = "ibmscx";
     await nodes.get("save").onclick();
     assert.equal(savedRequest.format, "ibmscx");
     const {readPortableProject} = await import("../src/portable-project.js");
     assert.equal(readPortableProject(savedRequest.text).headers.BASE, "62");
+    // Modern modes drive compatibility headers, layout, skin and save defaults.
+    nodes.get("theme").value = "IIDX"; nodes.get("theme").onchange();
+    chooseMode("SINGLE");
+    assert.equal(sourceHeaders().PLAYER, "1");
+    chooseMode("DOUBLE");
+    assert.equal(sourceHeaders().PLAYER, "3");
+    assert.ok(nodes.get("laneheads").children.some(n => n.textContent === "D8"));
+    chooseMode("PMS");
+    assert.equal(sourceHeaders().PLAYER, "3");
+    assert.equal(nodes.get("theme").value, "Pomu");
+    assert.equal(nodes.get("saveformat").value, "pms");
+    assert.deepEqual(modeChoices(), modernChoices);
+    nodes.get("undo").click();
+    assert.equal(nodes.get("chartmode").value, "DOUBLE");
+    assert.equal(nodes.get("theme").value, "IIDX");
+    nodes.get("redo").click();
+    assert.equal(nodes.get("chartmode").value, "PMS");
+    assert.equal(nodes.get("theme").value, "Pomu");
+    assert.equal(nodes.get("saveformat").value, "pms");
+    await nodes.get("save").onclick();
+    assert.equal(parseBMS(savedRequest.text).headers.PLAYER, "3");
+    chooseMode("SINGLE");
+    assert.equal(sourceHeaders().PLAYER, "1");
+    assert.equal(nodes.get("theme").value, "IIDX");
+    assert.equal(nodes.get("saveformat").value, "bms");
+    // A manually chosen nine-key skin cannot override the chart's mode.
+    nodes.get("theme").value = "Pomu"; nodes.get("theme").onchange();
+    assert.equal(nodes.get("chartmode").value, "SINGLE");
+    assert.equal(nodes.get("laneheads").children.filter(n => /^A[1-8]$/.test(n.textContent)).length, 8);
+    chooseMode("DOUBLE");
+    assert.equal(sourceHeaders().PLAYER, "3");
+    assert.equal(nodes.get("laneheads").children.filter(n => /^[AD][1-8]$/.test(n.textContent)).length, 16);
+    nodes.get("theme").value = "IIDX"; nodes.get("theme").onchange();
+    // Imported compatibility values remain intact until an explicit mode choice.
+    window.desktop.acceptOpen = async () => ({});
+    window.desktop.cancelOpen = async () => {};
+    window.desktop.newFile = async () => {};
+    for (const [player, value, label] of [["2", "legacy-couple", "Couple Play"], ["4", "legacy-battle", "Battle Play"]]) {
+      window.desktop.open = async () => ({ name: "legacy.bms", bytes: new TextEncoder().encode("#PLAYER " + player + "\n#TITLE Legacy\n#BPM 120\n#00011:01"), token: "legacy" });
+      await nodes.get("open").click();
+      assert.equal(nodes.get("chartmode").value, value);
+      assert.deepEqual(modeChoices(), [...modernChoices, [value, label]]);
+      nodes.get("title").value = "Edited legacy"; nodes.get("title").onchange();
+      await nodes.get("save").onclick();
+      assert.equal(parseBMS(savedRequest.text).headers.PLAYER, player);
+      chooseMode("PMS");
+      assert.equal(sourceHeaders().PLAYER, "3");
+      assert.deepEqual(modeChoices(), modernChoices);
+      nodes.get("undo").click();
+      assert.equal(nodes.get("chartmode").value, value);
+      assert.equal(sourceHeaders().PLAYER, player);
+      await nodes.get("new").click();
+      assert.equal(nodes.get("chartmode").value, "SINGLE");
+      assert.equal(sourceHeaders().PLAYER, "1");
+      assert.deepEqual(modeChoices(), modernChoices);
+    }
     // PMS is a single nine-key field, despite using channels from both BMS groups.
     nodes.get("theme").value = "IIDX";
     nodes.get("theme").onchange();
@@ -753,9 +1095,7 @@ test("controller initializes and routes document edits, history, columns and sou
     await nodes.get("open").click();
     assert.equal(nodes.get("theme").value, "Pomu");
     assert.equal(nodes.get("saveformat").value, "pms");
-    assert.equal(nodes.get("secondplayer-option").hidden, true);
-    assert.equal(nodes.get("header-player-label").hidden, true);
-    assert.equal(nodes.get("show2p").checked, false);
+    assert.equal(nodes.get("chartmode").value, "PMS");
     assert.deepEqual(nodes.get("laneheads").children.slice(4, 13).map(n => n.textContent),
       ["LW", "LY", "LG", "LB", "RED", "RB", "RG", "RY", "RW"]);
     nodes.get("statistics").click();
@@ -771,7 +1111,6 @@ test("controller initializes and routes document edits, history, columns and sou
     await nodes.get("open").click();
     assert.equal(nodes.get("theme").value, "IIDX");
     assert.equal(nodes.get("saveformat").value, "bms");
-    assert.equal(nodes.get("secondplayer-option").hidden, false);
     // Browser opening uses the same defaults, and manual theme changes take precedence.
     nodes.get("file").files = [{name: "browser.pms", arrayBuffer: async () => pmsBytes.buffer}];
     await nodes.get("file").onchange();
@@ -783,9 +1122,15 @@ test("controller initializes and routes document edits, history, columns and sou
     nodes.get("about").click();
     assert.match(nodes.get("reporttext").textContent, /MusicGameLAB/);
 
+    assert.equal(nodes.get("chartmode").value, "PMS");
+    assert.equal(nodes.get("laneheads").children.filter(n => /^[AD][1-8]$/.test(n.textContent)).length, 9);
+    nodes.get("source").value = pmsText; nodes.get("sourceapply").click();
+    assert.equal(nodes.get("chartmode").value, "PMS", "source edits preserve the independent PMS mode");
+    assert.equal(nodes.get("saveformat").value, "pms");
+    chooseMode("SINGLE");
     // Status follows the current pane and the actual note, not the nearest grid.
     nodes.get("reportclose").click();
-    nodes.get("theme").value = "";
+    nodes.get("theme").value = "IIDX";
     nodes.get("theme").onchange();
     nodes.get("source").value = "#BPM 120\n#00051:01010000\n#00008:0001";
     nodes.get("sourceapply").click();
@@ -847,6 +1192,275 @@ test("controller initializes and routes document edits, history, columns and sou
     nodes.get("tool-select").click();
     assert.equal(nodes.get("positionstatus").hidden, false);
     assert.equal(nodes.get("timestatus").hidden, true);
+    // Real controller route: two note clicks share a single audition voice.
+    auditionVoices.length = 0;
+    nodes.get("source").value = "#BPM 120\n#WAV01 first.wav\n#WAV02 second.wav\n#00011:01\n#00012:02";
+    nodes.get("sourceapply").click();
+    nodes.get("sounds").files = ["first.wav", "second.wav"].map(name => ({ name, arrayBuffer: async () => new ArrayBuffer(16) }));
+    await nodes.get("sounds").onchange();
+    const firstClick = hover(0, "A2");
+    canvas.onpointerdown(firstClick);
+    canvas.onpointerup(firstClick);
+    await new Promise(resolve => setImmediate(resolve));
+    const secondClick = hover(0, "A3");
+    canvas.onpointerdown(secondClick);
+    canvas.onpointerup(secondClick);
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(auditionVoices.length, 2);
+    assert.equal(auditionVoices[0].stops, 1);
+    assert.equal(auditionVoices[1].stops, 0);
+    nodes.get("stop").click();
+    assert.equal(auditionVoices[1].stops, 1);
+    // A short note inside a same-lane LN is reported and remains highlighted.
+    nodes.get("source").value = "#BPM 120\n#WAV01 a.wav\n#WAV02 b.wav\n#00051:01000100\n#00011:00020000";
+    nodes.get("sourceapply").click();
+    const overlapAt = hover(1, "A2");
+    for (const mode of ["nt", "bmse"]) {
+      if (nodes.get("lnstyle").value !== mode) nodes.get("toggleln").click();
+      nodes.get("errorcheck").click();
+      assert.match(nodes.get("reporttext").textContent, /#000 11 02：.*长音符/);
+      nodes.get("reportclose").click();
+      assert.equal(nodes.has("errorhighlight"), false);
+      paintCalls = []; nodes.get("grid").onchange();
+      assert.ok(paintCalls.some(c => c.canvas === "chart" && c.op === "strokeRect" && ["red", "rgba(255,0,0,1)"].includes(c.stroke)));
+      paintCalls = null;
+    }
+    if (nodes.get("lnstyle").value !== "nt") nodes.get("toggleln").click();
+    canvas.oncontextmenu({ ...overlapAt, button: 2, preventDefault() {} });
+    nodes.get("errorcheck").click();
+    assert.equal(nodes.get("reporttext").textContent, "未发现重叠、缺失定义或未配对长音符");
+    nodes.get("reportclose").click();
+    nodes.get("undo").click();
+    nodes.get("errorcheck").click();
+    assert.match(nodes.get("reporttext").textContent, /#000 11 02：.*长音符/);
+    nodes.get("reportclose").click();
+    nodes.get("source").value = "#BPM 120\n#00011:" + "0001" + "00".repeat(94);
+    nodes.get("sourceapply").click();
+    nodes.get("myo2").click();
+    assert.equal(nodes.get("myo2dialog").open, true);
+    nodes.get("myo2check").click();
+    assert.equal(nodes.get("myo2results").children.length, 1);
+    nodes.get("myo2adjust").click();
+    assert.equal(nodes.get("myo2message").textContent, "已调整");
+    nodes.get("myo2dialog").close();
+    nodes.get("sourceopen").click();
+    assert.equal(events(parseBMS(nodes.get("source").value))[0].beat, 3 / 48);
+    nodes.get("sourcecancel").click();
+    nodes.get("undo").click();
+    nodes.get("sourceopen").click();
+    assert.equal(events(parseBMS(nodes.get("source").value))[0].beat, 2 / 48);
+    nodes.get("sourcecancel").click();
+    nodes.get("redo").click();
+    nodes.get("myo2").click();
+    nodes.get("myo2bpm").value = "240";
+    nodes.get("myo2constant").click();
+    assert.equal(nodes.get("myo2message").textContent, "已恒速化");
+    nodes.get("myo2dialog").close();
+    assert.equal(Number(nodes.get("bpm").value), 240);
+    nodes.get("undo").click();
+    assert.equal(Number(nodes.get("bpm").value), 120);
+    // Ctrl-wheel scales the chart at the pointer, never the browser or chart data.
+    nodes.get("source").value = "#BPM 120\n#10011:01";
+    nodes.get("sourceapply").click();
+    nodes.get("zoom").value = "4";
+    nodes.get("zoom").onchange();
+    nodes.get("widthzoom").value = "1";
+    nodes.get("widthzoom").onchange();
+    const views = ["viewport", "view-left", "view-right"].map(id => nodes.get(id));
+    views.forEach((v, i) => { v.scrollTop = 5000 + i * 500; v.onscroll(); });
+    const wheel = (view, overrides = {}) => {
+      let prevented = false;
+      view["event-wheel"]({ ctrlKey: true, shiftKey: false, deltaY: -120,
+        clientX: 150, clientY: 160, preventDefault() { prevented = true; }, ...overrides });
+      return prevented;
+    };
+    const beatAt = (view, offset) => (parseFloat(nodes.get("scrollspace").style.height) -
+      20 * Number(nodes.get("editorzoom").value) / 100 - view.scrollTop - offset) /
+      (Number(nodes.get("zoom").value) * 48 * Number(nodes.get("editorzoom").value) / 100);
+    const closeTo = (a, b) => assert.ok(Math.abs(a - b) < 1e-8, `${a} != ${b}`);
+    for (const v of views) {
+      assert.equal(v["event-options-wheel"].passive, false);
+      const anchors = views.map(other => beatAt(other, other === v ? 160 : other.clientHeight / 2));
+      const oldZoom = Number(nodes.get("editorzoom").value);
+      assert.equal(wheel(v), true);
+      assert.equal(Number(nodes.get("editorzoom").value), oldZoom + 10);
+      views.forEach((other, i) => closeTo(beatAt(other, other === v ? 160 : other.clientHeight / 2), anchors[i]));
+      const tops = views.map(other => other.scrollTop);
+      views.forEach(other => other.onscroll());
+      assert.deepEqual(views.map(other => other.scrollTop), tops);
+      assert.equal(wheel(v, { deltaY: 120 }), true);
+      assert.equal(Number(nodes.get("editorzoom").value), oldZoom);
+      v.scrollLeft = 120;
+      const lanePosition = (v.scrollLeft + 150) / Number(nodes.get("widthzoom").value);
+      wheel(v, { shiftKey: true });
+      closeTo((v.scrollLeft + 150) / Number(nodes.get("widthzoom").value), lanePosition);
+      assert.equal(Number(nodes.get("editorzoom").value), oldZoom);
+    }
+    const zoomBeforeNormalWheel = nodes.get("zoom").value;
+    const beforeWheelTop = views[0].scrollTop;
+    assert.equal(wheel(views[0], { ctrlKey: false }), true);
+    assert.equal(views[0].scrollTop, beforeWheelTop - 96 * Number(nodes.get("zoom").value));
+    assert.equal(nodes.get("zoom").value, zoomBeforeNormalWheel);
+    nodes.get("editorzoom").value = "50"; nodes.get("editorzoom").onchange();
+    wheel(views[0], { deltaY: 120 });
+    assert.equal(Number(nodes.get("editorzoom").value), 50);
+    nodes.get("editorzoom").value = "300"; nodes.get("editorzoom").onchange();
+    wheel(views[0]);
+    assert.equal(Number(nodes.get("editorzoom").value), 300);
+    assert.equal(Number(nodes.get("zoom").value), 4);
+    assert.equal(Number(nodes.get("widthzoom").value), 1);
+    nodes.get("editorzoom").value = "100"; nodes.get("editorzoom").onchange();
+    nodes.get("sourceopen").click();
+    assert.deepEqual(events(parseBMS(nodes.get("source").value)).map(e => [e.measure, e.channel, e.value]), [[100, "11", "01"]]);
+    nodes.get("sourcecancel").click();
+
+    // Note bodies, labels and columns all scale together, independently of the grid axes.
+    nodes.get("source").value = "#BPM 120\n#00011:01\n#00012:01"; nodes.get("sourceapply").click();
+    views[0].scrollTop = parseFloat(nodes.get("scrollspace").style.height) - views[0].clientHeight;
+    paintCalls = []; views[0].onscroll();
+    const baseNote = paintCalls.find(c => c.canvas === "chart" && c.op === "fillRect" && c.args[3] === 10);
+    assert.ok(baseNote);
+    const baseFont = paintCalls.find(c => c.canvas === "chart" && c.op === "fillText" && c.args[0] === "01").font;
+    const baseWidths = nodes.get("laneheads").style.gridTemplateColumns.split(" ").map(parseFloat);
+    const beforeZoomSource = JSON.stringify(sourceHeaders()), beforeZoomTitle = document.title;
+    const beforeZoomUndo = nodes.get("undo").disabled;
+    nodes.get("editorzoom").value = "200"; nodes.get("editorzoom").onchange();
+    views[0].scrollTop = parseFloat(nodes.get("scrollspace").style.height) - views[0].clientHeight;
+    paintCalls = []; views[0].onscroll();
+    const scaledNote = paintCalls.find(c => c.canvas === "chart" && c.op === "fillRect" && c.args[3] === 20);
+    assert.ok(scaledNote); assert.equal(scaledNote.args[2], baseNote.args[2] * 2);
+    const scaledFont = paintCalls.find(c => c.canvas === "chart" && c.op === "fillText" && c.args[0] === "01").font;
+    assert.equal(parseFloat(scaledFont), parseFloat(baseFont) * 2);
+    assert.equal(parseFloat(nodes.get("laneheads").style.minHeight), 48);
+    assert.deepEqual(nodes.get("laneheads").style.gridTemplateColumns.split(" ").slice(0, 12).map(parseFloat), baseWidths.slice(0, 12).map(w => w * 2));
+    paintCalls = null;
+    assert.equal(JSON.stringify(sourceHeaders()), beforeZoomSource);
+    assert.equal(document.title, beforeZoomTitle);
+    assert.equal(nodes.get("undo").disabled, beforeZoomUndo);
+    const zoomWidths = nodes.get("laneheads").style.gridTemplateColumns.split(" ").map(parseFloat);
+    const zoomLane = nodes.get("laneheads").children.findIndex(n => n.textContent === "A2");
+    const noteClick = { currentTarget: canvas, button: 0, pointerId: 51,
+      clientX: zoomWidths.slice(0, zoomLane).reduce((a,b) => a+b, 0) + zoomWidths[zoomLane]/2 - views[0].scrollLeft,
+      clientY: parseFloat(nodes.get("scrollspace").style.height) - 40 - views[0].scrollTop - 10, preventDefault() {} };
+    canvas.focus(); nodes.get("tool-select").click();
+    canvas.onpointerdown(noteClick); canvas.onpointerup(noteClick);
+    nodes.get("deletenotes").click(); nodes.get("sourceopen").click();
+    assert.deepEqual(events(parseBMS(nodes.get("source").value)).map(n => n.channel), ["12"], "zoomed note hit matches its rendered lane and height");
+    nodes.get("sourcecancel").click(); nodes.get("undo").click();
+
+    const oldGrid = nodes.get("grid").value;
+    assert.equal(nodes.has("slashgrid"), false); assert.equal(nodes.has("slashsettings"), false);
+    handlers.keydown({ key: "/", code: "Slash", target: canvas, preventDefault() {} });
+    assert.equal(nodes.get("grid").value, oldGrid);
+    nodes.get("editorzoom").value = "100"; nodes.get("editorzoom").onchange();
+
+    // General settings use a draft. Cancel and invalid input never persist it.
+    nodes.get("generalsettings").click();
+    assert.equal(Number(nodes.get("autosaveminutes").value), 2);
+    const preferencesBeforeGeneral = localStorage.getItem("ibmsc-preferences");
+    const intervalsBeforeGeneral = intervals.length;
+    nodes.get("autosaveminutes").value = "7";
+    nodes.get("pageunits").value = "192";
+    nodes.get("general-cancel").click();
+    assert.equal(localStorage.getItem("ibmsc-preferences"), preferencesBeforeGeneral);
+    assert.equal(intervals.length, intervalsBeforeGeneral);
+    nodes.get("generalsettings").click();
+    assert.equal(Number(nodes.get("autosaveminutes").value), 2);
+    assert.equal(Number(nodes.get("pageunits").value), 384);
+    nodes.get("maxgrid").value = "1";
+    nodes.get("general-ok").click();
+    assert.equal(nodes.get("generalsettingsdialog").open, true);
+    assert.equal(nodes.get("general-error").hidden, false);
+    assert.equal(localStorage.getItem("ibmsc-preferences"), preferencesBeforeGeneral);
+    nodes.get("maxgrid").value = "384";
+    nodes.get("autosaveminutes").value = "0.5";
+    nodes.get("wheelunits").value = "48";
+    nodes.get("pageunits").value = "192";
+    nodes.get("defaultencoding").value = "shift_jis";
+    nodes.get("general-ok").click();
+    assert.equal(nodes.get("generalsettingsdialog").open, false);
+    const generalSaved = JSON.parse(localStorage.getItem("ibmsc-preferences"));
+    assert.equal(generalSaved.Edit.AutoSaveInterval, "30000");
+    assert.equal(generalSaved.Grid.gWheel, "48");
+    assert.equal(generalSaved.Grid.gPgUpDn, "192");
+    assert.equal(generalSaved.Save.BMSGridLimit, "0.5");
+    assert.equal(nodes.get("encoding").value, "shift_jis");
+    assert.equal(intervals.at(-1).milliseconds, 30000);
+    nodes.get("generalsettings").click();
+    nodes.get("autosave").checked = false; nodes.get("autosave").onchange();
+    assert.equal(nodes.get("autosaveminutes").disabled, true);
+    nodes.get("general-ok").click();
+    assert.equal(intervals.at(-1).cleared, true);
+    assert.equal(JSON.parse(localStorage.getItem("ibmsc-preferences")).Edit.AutoSaveInterval, "0");
+    nodes.get("encoding").value = "utf8"; // This file's save choice overrides the default.
+    nodes.get("generalsettings").click();
+    nodes.get("clickstop").checked = false;
+    nodes.get("general-ok").click();
+    assert.equal(nodes.get("encoding").value, "utf8");
+
+    nodes.get("language-toggle").click();
+    assert.equal(nodes.get("languagepopover").popoverOpen, true);
+    nodes.get("languagepopover").children.find(b => b.dataset.language === "eng").click();
+    assert.equal(nodes.get("language").value, "eng");
+    assert.equal(nodes.get("languagepopover").popoverOpen, false);
+    nodes.get("language").value = "chs"; nodes.get("language").onchange();
+    // Switching languages must not edit the chart or reset controls. Newly rebuilt
+    // options and statistics also use the selected language.
+    nodes.get("sourceopen").click();
+    const beforeLanguage = nodes.get("source").value;
+    nodes.get("sourcecancel").click();
+    const controlValues = ["zoom", "widthzoom", "lnstyle", "chartmode"].map(id => nodes.get(id).value);
+    for (const [id, heading, unset] of [["jpn", "統計", "未指定"], ["eng", "Statistics", "Unspecified"], ["kor", "통계", "미지정"], ["chs", "统计", "未指定"]]) {
+      nodes.get("language").value = id; nodes.get("language").onchange();
+      assert.equal(JSON.parse(localStorage.getItem("ibmsc-language")).id, id);
+      assert.equal(nodes.get("language-menu").children.find(b => b["aria-checked"] === "true").dataset.language, id);
+      nodes.get("about").click();
+      assert.match(nodes.get("reporttext").textContent, /移植与维护：SeaRay|Port and maintenance: SeaRay|移植・保守：SeaRay|이식 및 유지보수: SeaRay/);
+      if (id !== "chs") assert.doesNotMatch(nodes.get("reporttext").textContent, /跨平台谱面编辑器|原作贡献者|移植与维护/);
+      assert.equal(nodes.has("checkupdates-zh"), false);
+      nodes.get("reportclose").click();
+      nodes.get("statistics").click();
+      assert.equal(nodes.get("reporttitle").textContent, heading);
+      nodes.get("reportclose").click();
+      nodes.get("bpm").onchange(); // Rebuilds header choices.
+      assert.equal(nodes.get("header-RANK").children[0].textContent, unset);
+      assert.deepEqual(["zoom", "widthzoom", "lnstyle", "chartmode"].map(id => nodes.get(id).value), controlValues);
+    }
+    nodes.get("sourceopen").click();
+    assert.equal(nodes.get("source").value, beforeLanguage);
+    nodes.get("sourcecancel").click();
+
+    // Exercise translated errors through actual handlers, including Electron's
+    // serialized remote error format. A failed operation must not replace data.
+    nodes.get("sourceopen").click();
+    const unchanged = nodes.get("source").value;
+    nodes.get("source").value = "#BPM 0";
+    nodes.get("sourceapply").click();
+    const saveHandler = window.desktop.save;
+    nodes.get("saveformat").value = "bms";
+    for (const language of ["jpn", "eng", "kor", "chs"]) {
+      nodes.get("language").value = language; nodes.get("language").onchange();
+      const t = createTranslator(language);
+      assert.equal(nodes.get("sourceerror").textContent, t("初始 BPM 必须为正数"));
+      nodes.get("sourcecancel").click();
+      window.desktop.save = async () => ({ name: "曲名 {1}.bms" });
+      await nodes.get("save").onclick();
+      assert.equal(nodes.get("status").textContent, t("已保存 {0}", "曲名 {1}.bms"));
+      window.desktop.save = async () => { throw Error("Error invoking remote method 'file:save': Error: Shift-JIS 无法保存字符“她”，请改用 UTF-8"); };
+      await nodes.get("save").onclick();
+      assert.equal(nodes.get("status").textContent, t("Shift-JIS 无法保存字符“她”，请改用 UTF-8"));
+      nodes.get("errorcheck").click();
+      assert.ok(!/缺少|未配对/.test(nodes.get("reporttext").textContent) || language === "chs");
+      nodes.get("reportclose").click();
+      nodes.get("sourceopen").click();
+      assert.equal(nodes.get("source").value, unchanged);
+      assert.equal(nodes.get("sourceerror").textContent, "");
+      nodes.get("source").value = "#BPM 0";
+      nodes.get("sourceapply").click();
+    }
+    window.desktop.save = saveHandler;
+    nodes.get("sourcecancel").click();
+
   } finally {
     for (const [key, value] of Object.entries(prior)) {
       if (value === undefined) delete globalThis[key];

@@ -30,12 +30,14 @@ function saveBytes(request) {
     request.text.length > 32 * 1024 * 1024
   )
     throw Error("无效谱面数据");
-  const encoding = ["utf8", "shift_jis", "gbk"].includes(request.encoding)
-    ? request.encoding
-    : "utf8";
+  const encoding = request.encoding || "utf8";
+  if (!["utf8", "shift_jis"].includes(encoding)) throw Error("不支持的保存编码");
   const bytes = iconv.encode(request.text, encoding);
-  if (iconv.decode(bytes, encoding) !== request.text)
-    throw Error("所选编码无法表示所有字符，请改用 UTF-8");
+  if (iconv.decode(bytes, encoding) !== request.text) {
+    const character = [...request.text].find(c => iconv.decode(iconv.encode(c, encoding), encoding) !== c);
+    const name = "Shift-JIS";
+    throw Error(`${name} 无法保存字符“${character}”，请改用 UTF-8`);
+  }
   return bytes;
 }
 module.exports = { saveBytes };

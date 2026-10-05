@@ -1,2 +1,14 @@
-export const creditsText =
-  "iBMSC 跨平台移植版\n\n原作：iBMS / iBMS.[4th Age]（上游：aqtq314）\nCopyright (C) iBMS.[4th Age]\n\n原作贡献者\nhitkey、Nekokan、MusicGameLAB、Freefire、the DtTvB、Wen-DB、BJmz、BombTrack、C.R.S、enderdz、复仇天神、ILSPQ、獠牙、L.-S.P.、Origin (Fantasy_Date)、Rogue、银羽のK’、其他 4A 成员\n\nhitkey：格式文档、测试、日文网站与改进建议。\nNekokan：日文本地化、Feeling PoMu 主题及测试。\nMusicGameLAB：韩文本地化。\nWen-DB：图标及关于画面设计。\nFreefire、the DtTvB 及其他上述贡献者：见上游完整致谢。\n\n基于 3.0.5 Delta；原版最后功能修复：2012-08-07；韩文本地化：2013-11-09。\n本移植为后续分支，不是原作者官方发布。完整来源、贡献说明及依赖许可证见随包 CREDITS.md、UPSTREAM-README.md、THIRD_PARTY_NOTICES.md。\n\n上游：https://github.com/aqtq314/iBMSC";
+const contributors = "hitkey、Nekokan、MusicGameLAB、Freefire、the DtTvB、Wen-DB、BJmz、BombTrack、C.R.S、enderdz、复仇天神、ILSPQ、獠牙、L.-S.P.、Origin (Fantasy_Date)、Rogue、银羽のK’";
+export const creditsRows = [
+  { source: "iBMSC 跨平台谱面编辑器" },
+  { source: "" },
+  { source: "原作：{0}", values: ["iBMS / iBMS.[4th Age]"] },
+  { source: "Copyright (C) iBMS.[4th Age]" },
+  { source: "移植与维护：{0}", values: ["SeaRay"] },
+  { source: "" },
+  { source: "原作贡献者" },
+  { source: "{0}", values: [contributors] },
+  { source: "" },
+  { source: "项目：{0}", values: ["https://github.com/RM-801/ibmsc-node"] },
+];
+export const creditsText = creditsRows.map(row => row.source.replace(/\{(\d+)\}/g, (_, i) => row.values?.[i] ?? "")).join("\n");

@@ -1,10 +1,5 @@
-// Form1.Designer.vb: CHPlayer, CHRank and CHDifficulty use DropDownList.
+// Form1.Designer.vb: CHRank and CHDifficulty use DropDownList.
 export const headerChoices = {
-  PLAYER: [
-    ["1", "1 - Single Play"],
-    ["2", "2 - Couple Play"],
-    ["3", "3 - Double Play"],
-  ],
   RANK: [
     ["", "未指定"],
     ["0", "0 - Very Hard"],
@@ -24,7 +19,6 @@ export const headerChoices = {
   ],
 };
 export const headerLabels = {
-  PLAYER: "玩家",
   RANK: "判定",
   DIFFICULTY: "难度",
 };

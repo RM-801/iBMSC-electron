@@ -1,5 +1,7 @@
 import { parseBMS, serializeBMS, flattenBGMLongs } from "./bms.js";
+import { migrateExpansion } from "./expansion.js";
 import { validId } from "./identifiers.js";
+import { editorMode } from "./chart-mode.js";
 export function validateProjectChart(c) {
   if (
     !c ||
@@ -11,6 +13,8 @@ export function validateProjectChart(c) {
     !Array.isArray(c.raw)
   )
     throw Error("工程结构无效");
+  if (c.editorMode !== undefined && editorMode(c) !== c.editorMode)
+    throw Error("无效谱面类型");
   for (const [k, v] of Object.entries(c.headers))
     if (
       !/^[A-Z][A-Z0-9]*$/.test(k) ||
@@ -82,5 +86,5 @@ export function readPortableProject(text) {
   const data = JSON.parse(text);
   if (data.format !== "ibmsc-node-project" || data.version !== 1)
     throw Error("不支持的移植版工程版本");
-  return validateProjectChart(data.chart);
+  return migrateExpansion(validateProjectChart(data.chart));
 }

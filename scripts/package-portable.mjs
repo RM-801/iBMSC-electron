@@ -1,3 +1,4 @@
+import windowsDialog from "../electron/windows-save-dialog.cjs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -16,6 +17,7 @@ const output = path.resolve(
 await fs.mkdir(path.dirname(output), { recursive: true });
 await fs.mkdir(output);
 
+await windowsDialog.buildWindowsSaveDialog();
 const artifacts = await build({
   projectDir: root,
   targets: Platform.WINDOWS.createTarget("portable", Arch.x64),
@@ -29,6 +31,7 @@ const artifacts = await build({
     electronVersion: pkg.devDependencies.electron,
     npmRebuild: false,
     asar: true,
+    asarUnpack: ["electron/native/*.exe"],
     files: [
       "index.html",
       "src/**/*",

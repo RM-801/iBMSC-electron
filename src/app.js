@@ -1,18 +1,32 @@
+import { encodeBMS } from "./bms-encoding.js";
+import { generalDefaults, generalPreferenceIds, validateGeneralSettings } from "./general-settings.js";
+import { createChartNavigation } from "./chart-navigation.js";
+import { prepareBMSExport } from "./bms-export.js";
+import { createFindCriteria, applyFindOperation } from "./find-replace.js";
+import { createFindReplace } from "./find-replace-ui.js";
+import { createLocalization } from "./localization.js";
+import { constantBPM, checkMyO2Grid, adjustMyO2Grid } from "./myo2.js";
+import { bmpDefinitions, migrateExpansion, setBMPDefinition } from "./expansion.js";
+import { KeyPreview } from "./key-preview.js";
+import { decodeAudio } from "./audio-decode.js";
 import { playbackPlan, voiceStart } from "./playback-plan.js";
 import { positionStatus, statusNumber } from "./position-status.js";
 import { defaultColumns } from "./default-columns.js";
 import { gridOffsets } from "./grid-lines.js";
 import { playableNoteCount, isPomuTheme, pomuColumns, pomuChannels, pomuStatisticsRows, shiftVisibleNotes } from "./key-layout.js";
-import { readPlayerSettings, writePlayerSettings } from "./player-settings.js";
 import { remapClipboardNotes, remapClipboardRows } from "./clipboard-base.js";
 import { writePortableProject, readPortableProject, validateProjectChart } from "./portable-project.js";
+import { createThemeDraft, validateTheme, serializeTheme, readThemeDocument } from "./theme-editor.js";
+import { createThemeEditor } from "./theme-editor-ui.js";
+import { editableTheme } from "./theme-defaults.js";
 import { themeMetadata } from "./theme-metadata.js";
-import { validateVisual, visualNumber, visualColor, visualFont } from "./visual-settings.js";
-import { creditsText } from "./credits.js";
+import { visualNumber, visualColor, visualFont } from "./visual-settings.js";
+import { creditsRows } from "./credits.js";
 import { chartBase, normalizeId, validId, resourceIds } from "./identifiers.js";
 import { measureLabel } from "./measure-edit.js";
 import { fillBGMColumns } from "./columns.js";
 import { headerChoices, headerLabels } from "./header-fields.js";
+import { editorMode, initializeEditorMode, editorModeChoices, editorModeSelection, setEditorMode } from "./chart-mode.js";
 import {
   noteGroup,
   removeNoteGroup,
@@ -31,7 +45,6 @@ import {
   preferenceFields,
   readPreferenceAttributes,
   writePreferenceAttributes,
-  xmlEscape,
 } from "./preferences.js";
 import { renderIndex } from "./render-index.js";
 import {
@@ -91,7 +104,19 @@ import {
 const $ = (id) => document.getElementById(id),
   canvas = $("chart"),
   ctx = canvas.getContext("2d");
-let chart = parseBMS("#BPM 120\n#LNTYPE 1"),
+const ui = createLocalization(document.body);
+const t = ui.t;
+let generalOptions = { ...generalDefaults };
+let navigation;
+// User preference stays independent from lanes added to fit the chart or viewport.
+let bgmMinimum = 15;
+let editorZoom = 1;
+const editorInset = () => 20 * editorZoom;
+function editorFont(key, fallback) {
+  return visualFont(currentTheme, key, fallback).replace(/([\d.]+)(px|pt)\b/,
+    (_, size, unit) => Number(size) * editorZoom + unit);
+}
+let chart = initializeEditorMode(parseBMS("#PLAYER 1\n#BPM 120\n#LNTYPE 1")),
   dirty = false,
   selected = null,
   scale = 48 * 4,
@@ -118,6 +143,8 @@ const panes = [
 let wavSelection = new Set(["01"]),
   wavListSignature = null;
 let renderCache = renderIndex(chart);
+let bmpNames = bmpDefinitions(chart);
+let errorEvents = new Set();
 const history = new History(chart);
 let expansionEdit = null;
 function finishExpansionEdit() {
@@ -132,6 +159,8 @@ $("expansion").oninput = () => {
   if (expansionEdit?.target !== chart)
     expansionEdit = { target: chart, before: structuredClone(chart) };
   chart.raw = $("expansion").value.split(/\r\n|\n|\r/);
+  bmpNames = bmpDefinitions(chart);
+  draw();
   dirty = history.isDirty(chart);
   document.title = (dirty ? "● " : "") + $("project").textContent + " · iBMSC";
   $("undo").disabled = false;
@@ -159,7 +188,7 @@ let columns = [],
   statusPointer = null,
   timeStatus = { start: 0, length: 0 },
   box = null,
-  currentTheme = null,
+  currentTheme = themes.IIDX,
   pendingSM = null;
 let overlayBuffer = null,
   overlayClock = null,
@@ -172,10 +201,12 @@ let audio,
   playFrame = null,
   playBeat = null,
   playClock = null;
-function status(s) {
-  $("status").textContent = s;
+function status(s, ...values) {
+  ui.text($("status"), s, ...values);
 }
+const keyPreview = new KeyPreview(context);
 function stop() {
+  keyPreview.stop();
   playGeneration++;
   clearInterval(playTimer);
   cancelAnimationFrame(playFrame);
@@ -189,7 +220,7 @@ function stop() {
     } catch {}
   });
   sources = [];
-  $("playstatus").textContent = "";
+  ui.text($("playstatus"), "");
 }
 function mutate(fn) {
   finishExpansionEdit();
@@ -210,6 +241,11 @@ function mutate(fn) {
   }
 }
 function refresh() {
+  syncEditorModePresentation();
+  syncEditorModeControl();
+  syncNativeMenuState();
+  errorEvents = new Set(statistics(chart, { nt: $("lnstyle").value === "nt" }).errorEvents);
+  bmpNames = bmpDefinitions(chart);
   const expansion = chart.raw.join("\n");
   if ($("expansion").value !== expansion) $("expansion").value = expansion;
   if (!$("measurelist").children.length) {
@@ -244,7 +280,6 @@ function refresh() {
   for (const key of [
     "SUBTITLE",
     "SUBARTIST",
-    "PLAYER",
     "RANK",
     "DIFFICULTY",
     "EXRANK",
@@ -261,7 +296,6 @@ function refresh() {
   $("undo").disabled = !history.canUndo;
   $("redo").disabled = !history.canRedo;
   refreshWAVList();
-  $("show2p").checked = showsSecondPlayer(chart);
   rebuildColumns();
   starts = measureStarts(chart);
   setScrollExtent(scrollEndBeat(chart));
@@ -270,7 +304,7 @@ function refresh() {
 function setScrollExtent(endBeat) {
   const oldHeight = height;
   height = Math.max(
-    endBeat * scale + 30,
+    endBeat * scale + 30 * editorZoom,
     ...panes.map((p) => p.view.clientHeight),
   );
   for (const pane of panes) {
@@ -348,27 +382,18 @@ for (const [id, direction] of [
       refreshWAVList();
     }
   };
-function resetBGMColumns() {
+function resetChartPositionStatus() {
   statusPointer = null;
   timeStatus = { start: 0, length: 0 };
   for (const key of ["column", "note", "measure", "grid", "reduced", "measurePosition", "absolute", "length", "hidden"])
-    $("status-" + key).textContent = "";
-  $("bgmcount").value = Math.max(15, maxBGM(chart));
+    ui.raw($("status-" + key), "");
 }
 function rebuildColumns() {
-  const pomu = isPomuTheme(currentTheme);
-  $("count").textContent = String(playableNoteCount(statistics(chart, { nt: $("lnstyle").value === "nt" }), currentTheme, showsSecondPlayer(chart)));
-  $("secondplayer-option").hidden = pomu;
-  $("show2p").disabled = pomu;
-  $("show2p").checked = !pomu && showsSecondPlayer(chart);
-  if ($("header-player-label")) $("header-player-label").hidden = pomu;
-  const bgm = Math.max(
-    Math.min(999, Math.max(1, Number($("bgmcount").value) || 15)),
-    maxBGM(chart),
-  );
-  $("bgmcount").value = bgm;
+  const pomu = isNineKeyLayout();
+  $("count").textContent = String(playableNoteCount(statistics(chart, { nt: $("lnstyle").value === "nt" }), pomu ? themes.Pomu : null, showsSecondPlayer(chart)));
+  const bgm = Math.max(bgmMinimum, maxBGM(chart));
   columns = originalColumns({
-    double: pomu || $("show2p").checked,
+    double: pomu || showsSecondPlayer(chart),
     bpm: $("showbpm").checked,
     stop: $("showstop").checked,
     bga: $("showbga").checked,
@@ -377,7 +402,10 @@ function rebuildColumns() {
   if (currentTheme) {
     let left = 0;
     for (const col of columns) {
-      const style = currentTheme.columns.find(
+      // A nine-key skin must not hide the keys of a SINGLE/DOUBLE chart.
+      const laneTheme = !pomu && isPomuTheme(currentTheme) && col.id >= 4 && col.id <= 20
+        ? themes.IIDX : currentTheme;
+      const style = laneTheme.columns.find(
         (c) => Number(c.Index) === (col.id >= 26 ? 26 : col.id),
       );
       if (style) {
@@ -390,20 +418,25 @@ function rebuildColumns() {
     }
   }
   let columnLeft = 0;
-  columns = columns.filter(col => col.width > 0);
+  columns = columns.filter(col => col.width > 0 &&
+    (editorMode(chart) !== "PMS" || col.id < 4 || col.id > 20 || pomuColumns.includes(col.id)));
   for (const col of columns) {
-    col.width *= Number($("widthzoom").value) || 1;
+    col.width *= (Number($("widthzoom").value) || 1) * editorZoom;
     col.left = columnLeft;
     columnLeft += col.width;
   }
   columns = fillBGMColumns(columns, Math.max(0,
     ...panes.filter(p => !p.panel.hidden).map(p => p.view.clientWidth)));
-  contentWidth = columns.at(-1).left + columns.at(-1).width;
+  $("bgmcount").value = String(columns.filter(col => col.channel === "01").length);
+  const lastColumn = columns.at(-1);
+  contentWidth = lastColumn ? lastColumn.left + lastColumn.width : 0;
   for (const pane of panes) {
     pane.space.style.width = contentWidth + "px";
     const heads = pane.heads;
+    heads.hidden = !$("showcolumncaption").checked;
     heads.replaceChildren();
-    heads.style.font = visualFont(currentTheme, "ColumnTitleFont", "10px Tahoma");
+    heads.style.font = editorFont("ColumnTitleFont", "10px Tahoma");
+    heads.style.minHeight = 24 * editorZoom + "px";
     heads.style.color = visualColor(currentTheme, "ColumnTitle", "#ddd");
     heads.style.backgroundColor = visualColor(currentTheme, "Bg", "#000");
     heads.style.width = contentWidth + "px";
@@ -413,7 +446,7 @@ function rebuildColumns() {
     for (const col of columns) {
       const b = document.createElement("b");
       b.textContent = col.title;
-      b.style.backgroundColor = col.theme ? argb(col.theme.BG) : "transparent";
+      b.style.backgroundColor = $("showbackground").checked && col.theme ? argb(col.theme.BG) : "transparent";
       heads.append(b);
     }
   }
@@ -422,7 +455,7 @@ function laneOf(e) {
   return columns.findIndex((c) => c.id === renderCache.column(e));
 }
 function y(beat) {
-  return height - 20 - beat * scale;
+  return height - editorInset() - beat * scale;
 }
 function draw() {
   for (const pane of panes) if (!pane.panel.hidden) drawPane(pane);
@@ -438,6 +471,7 @@ function drawPane(pane) {
     scale,
     top: view.scrollTop,
     pixelRatio: devicePixelRatio,
+    bottomInset: editorInset(),
   };
   const top = view.scrollTop,
     y = (beat) => top + displayedBeatY(pane.renderGeometry, beat),
@@ -458,9 +492,10 @@ function drawPane(pane) {
     -left * devicePixelRatio,
     -top * devicePixelRatio,
   );
+  ctx.lineWidth = editorZoom;
   ctx.fillStyle = visualColor(currentTheme, "Bg", "#000");
   ctx.fillRect(left, top, width, h);
-  for (const col of columns) {
+  if ($("showbackground").checked) for (const col of columns) {
     ctx.fillStyle = col.theme
       ? argb(col.theme.BG)
       : !col.channel
@@ -472,9 +507,20 @@ function drawPane(pane) {
             : Number(col.title.slice(1)) % 2
               ? "#0c1620"
               : "#181818";
-    ctx.fillRect(col.left, top, col.width - 1, h);
+    ctx.fillRect(col.left, top, col.width, h);
   }
-  ctx.font = visualFont(currentTheme, "kMFont", "10px monospace");
+  if ($("showvertical").checked) {
+    ctx.strokeStyle = visualColor(currentTheme, "VLine", "#000");
+    ctx.beginPath();
+    for (const col of columns) {
+      if (col.left < left || col.left > left + width) continue;
+      ctx.moveTo(col.left, top);
+      ctx.lineTo(col.left, top + h);
+    }
+    ctx.stroke();
+  }
+  const measureTextColor = currentTheme?.columns.find(c => Number(c.Index) === 0)?.TextColor;
+  ctx.font = editorFont("kMFont", "10px monospace");
   for (let m = 0; m < 1000; m++) {
     const bottom = y(starts[m]),
       upper = y(starts[m + 1]);
@@ -494,47 +540,53 @@ function drawPane(pane) {
       if ($(flag).checked)
         for (const offset of gridOffsets(starts[m + 1] - starts[m], $(id).value))
           line(offset, visualColor(currentTheme, themeKey, fallback));
-    line(0, visualColor(currentTheme, "MLine", "#808080"));
-    ctx.fillStyle = "#ddd";
-    ctx.fillText(String(m).padStart(3, "0"), 10, bottom - 5);
+    if ($("showmeasureline").checked) line(0, visualColor(currentTheme, "MLine", "#808080"));
+    if ($("showmeasureindex").checked) {
+      ctx.fillStyle = measureTextColor === undefined ? "#ddd" : noteColor(measureTextColor);
+      ctx.fillText(String(m).padStart(3, "0"), 10 * editorZoom, bottom - 5 * editorZoom);
+    }
   }
   drawWaveOverlay(ctx, top, left, h);
   for (const [a, b] of renderCache.visiblePairs(
-    (height - 20 - top - h) / scale,
-    (height - 20 - top) / scale,
+    (height - editorInset() - top - h) / scale,
+    (height - editorInset() - top) / scale,
   )) {
     const col = columns[laneOf(a)];
     if (!col || col.width <= 0) continue;
     ctx.fillStyle = noteColor(columnStyle(col).LongNoteColor);
     ctx.globalAlpha = /^[3478]/.test(a.channel) ? visualNumber(currentTheme, "kOpacity", 0.5) : 1;
     ctx.fillRect(
-      col.left + 2,
+      col.left + 2 * editorZoom,
       y(b.beat),
-      col.width - 4,
+      col.width - 4 * editorZoom,
       Math.max(0, y(a.beat) - y(b.beat) - noteHeight()),
     );
     ctx.globalAlpha = 1;
   }
   for (const e of renderCache.visible(
-    (height - 20 - top - h - noteHeight() - 2) / scale,
-    (height - 20 - top + noteHeight() + 2) / scale,
+    (height - editorInset() - top - h - noteHeight() - 2) / scale,
+    (height - editorInset() - top + noteHeight() + 2) / scale,
   )) {
     const col = columns[laneOf(e)],
       yy = y(e.beat);
     if (!col || col.width <= 0 || yy < top - noteHeight() || yy > top + h + noteHeight()) continue;
     const hidden = /^[3478]/.test(e.channel);
     paintNote(ctx, col, yy, {
-      height: noteHeight(), opacity: visualNumber(currentTheme, "kOpacity", 0.5), selectedColor: visualColor(currentTheme, "kSelected", "red"),
+      height: noteHeight(), zoom: editorZoom, opacity: visualNumber(currentTheme, "kOpacity", 0.5), selectedColor: visualColor(currentTheme, "kSelected", "red"),
       long: e.bgmLong || /^[5678]/.test(e.channel),
       hidden,
       selected:
         selectedIds.has(eventId(e)) ||
         (selected?.row === e.row && selected?.index === e.index),
     });
+    if (errorEvents.has(eventId(e))) {
+      ctx.strokeStyle = visualColor(currentTheme, "kError", "red");
+      ctx.strokeRect(col.left + 2 * editorZoom, yy - noteHeight(), Math.max(0, col.width - 4 * editorZoom), noteHeight());
+    }
     const label =
       $("showfilename").checked && col.id > 2
         ? ([22, 23, 24].includes(col.id)
-            ? chart.resources.BMP[e.value]
+            ? bmpNames[e.value]
             : chart.resources.WAV[e.value]) || e.value
         : String(numericValue(chart, e));
     drawNoteLabel(ctx, col, yy, label, e.bgmLong || /^[5678]/.test(e.channel));
@@ -548,9 +600,9 @@ function drawPane(pane) {
       if (!col || col.width <= 0) continue;
       ctx.fillStyle = noteColor(columnStyle(col).LongNoteColor);
       ctx.fillRect(
-        col.left + 2,
+        col.left + 2 * editorZoom,
         y(b.beat),
-        col.width - 4,
+        col.width - 4 * editorZoom,
         Math.max(0, y(a.beat) - noteHeight() - y(b.beat)),
       );
     }
@@ -560,7 +612,7 @@ function drawPane(pane) {
       if (!col || col.width <= 0 || yy < top - noteHeight() || yy > top + h + noteHeight())
         continue;
       paintNote(ctx, col, yy, {
-      height: noteHeight(), opacity: visualNumber(currentTheme, "kOpacity", 0.5), selectedColor: visualColor(currentTheme, "kSelected", "red"),
+      height: noteHeight(), zoom: editorZoom, opacity: visualNumber(currentTheme, "kOpacity", 0.5), selectedColor: visualColor(currentTheme, drag.resize ? "kMouseOverE" : "kSelected", "red"),
         long: note.bgmLong || /^[5678]/.test(note.channel),
         hidden: /^[3478]/.test(note.channel),
         selected: true,
@@ -578,17 +630,28 @@ function drawPane(pane) {
       const py = top + (writePointer.clientY - rect.top) * canvas.height / (rect.height * devicePixelRatio);
       const col = columns[p.lane], yy = y(snappedBeat(p));
       ctx.save();
-      ctx.strokeStyle = "#63ffff";
-      ctx.lineWidth = 1;
-      ctx.strokeRect(col.left + 2, yy - noteHeight(), col.width - 4, noteHeight());
+      ctx.strokeStyle = visualColor(currentTheme, "kMouseOver", "#63ffff");
+      ctx.lineWidth = editorZoom;
+      ctx.strokeRect(col.left + 2 * editorZoom, yy - noteHeight(), col.width - 4 * editorZoom, noteHeight());
       ctx.beginPath();
       ctx.moveTo(col.left, yy); ctx.lineTo(col.left + col.width, yy);
       ctx.stroke();
       ctx.strokeStyle = "#ff9e38";
       ctx.beginPath();
-      ctx.moveTo(px - 4, py); ctx.lineTo(px + 4, py);
-      ctx.moveTo(px, py - 4); ctx.lineTo(px, py + 4);
+      ctx.moveTo(px - 4 * editorZoom, py); ctx.lineTo(px + 4 * editorZoom, py);
+      ctx.moveTo(px, py - 4 * editorZoom); ctx.lineTo(px, py + 4 * editorZoom);
       ctx.stroke();
+      ctx.restore();
+    }
+  }
+  if (statusPointer?.currentTarget === canvas && $("tool").value === "select" && !drag && currentTheme?.visual?.kMouseOver?.Value !== undefined) {
+    const p = location(statusPointer), hovered = p && hit(p);
+    if (hovered) {
+      const col = columns[laneOf(hovered)], group = noteGroup(chart, hovered, $("lnstyle").value === "nt");
+      const first = Math.min(...group.map(note => note.beat)), last = Math.max(...group.map(note => note.beat));
+      ctx.save();
+      ctx.strokeStyle = visualColor(currentTheme, "kMouseOver", "#63ffff");
+      ctx.strokeRect(col.left + 2 * editorZoom, y(last) - noteHeight(), Math.max(0, col.width - 4 * editorZoom), y(first) - y(last) + noteHeight());
       ctx.restore();
     }
   }
@@ -600,14 +663,23 @@ function drawPane(pane) {
     ctx.stroke();
   }
   if (box) {
-    ctx.strokeStyle = visualColor(currentTheme, "SelBox", "#ffda50");
-    ctx.fillStyle = "#ffda5020";
+    const time = $("tool").value === "time";
+    const border = visualColor(currentTheme, "SelBox", "#ffda50");
+    ctx.strokeStyle = time ? visualColor(currentTheme, "TSCursor", border) : border;
+    ctx.fillStyle = time ? visualColor(currentTheme, "TSSel", "#ffda5020") : "#ffda5020";
     const x = Math.min(box.x0, box.x1),
       yy = Math.min(box.y0, box.y1),
       w = Math.abs(box.x1 - box.x0),
       h = Math.abs(box.y1 - box.y0);
     ctx.fillRect(x, yy, w, h);
     ctx.strokeRect(x, yy, w, h);
+    if (time && currentTheme?.visual?.TSHalf?.Value !== undefined) {
+      ctx.strokeStyle = visualColor(currentTheme, "TSHalf", "transparent");
+      ctx.beginPath();
+      ctx.moveTo(x, yy + h / 2);
+      ctx.lineTo(x + w, yy + h / 2);
+      ctx.stroke();
+    }
   }
 }
 function location(e) {
@@ -621,6 +693,7 @@ function location(e) {
     scale,
     top: view.scrollTop,
     pixelRatio: devicePixelRatio,
+    bottomInset: editorInset(),
   };
   const lane = columns.findIndex(
     (c) => c.channel && x >= c.left && x < c.left + c.width,
@@ -656,18 +729,18 @@ function refreshPositionStatus() {
   if (!p) return;
   const writing = $("tool").value === "write";
   let note = writing ? null : hit(p);
-  let length = "", hidden = "";
+  let length = "", hidden = "", lengthValue = null;
   if (note) {
     const pair = renderCache.pairs.find(pair => pair.some(n => eventId(n) === eventId(note)));
     if ($("lnstyle").value === "nt") {
       if (pair) note = pair[0];
-      length = "长度 = " + statusNumber(pair ? (pair[1].beat - pair[0].beat) * 48 : 0);
+      length = "长度 = {0}"; lengthValue = statusNumber(pair ? (pair[1].beat - pair[0].beat) * 48 : 0);
     } else if (note.bgmLong || /^[5678]/.test(note.channel)) length = "长音符";
     if (/^[3478]/.test(note.channel)) hidden = "隐藏";
   } else if (writing) {
     if (drag?.ntwrite && drag.preview) {
       const notes = drag.preview.notes;
-      length = "长度 = " + statusNumber((notes.at(-1).beat - notes[0].beat) * 48);
+      length = "长度 = {0}"; lengthValue = statusNumber((notes.at(-1).beat - notes[0].beat) * 48);
     } else if ($("notetype").value === "long") length = "长音符";
     if ($("hiddennote").checked) hidden = "隐藏";
   }
@@ -679,8 +752,8 @@ function refreshPositionStatus() {
   $("status-note").textContent = note ? String(numericValue(chart, note))
     : writing ? (col.id <= 2 ? $("eventvalue").value : $("sample").value) : "";
   for (const [key, value] of Object.entries(values)) $("status-" + key).textContent = value;
-  $("status-length").textContent = length;
-  $("status-hidden").textContent = hidden;
+  ui.text($("status-length"), length, lengthValue);
+  ui.text($("status-hidden"), hidden);
 }
 function place(p, value) {
   const col = columns[p.lane];
@@ -834,7 +907,7 @@ function updateDragPreview(e) {
         ? 0
         : snappedBeat(p) - snappedBeat(drag.start);
       const deltaColumn = columns[p.lane].id - columns[drag.start.lane].id;
-      const moved = isPomuTheme(currentTheme)
+      const moved = isNineKeyLayout()
         ? shiftVisibleNotes(drag.notes, columns[drag.start.lane].id, columns[p.lane].id, columns)
         : drag.notes.map(n => ({ ...n, column: n.column + deltaColumn }));
       const notes = moved.map((n) => ({
@@ -869,7 +942,7 @@ canvas.onpointermove = (e) => {
     if ($("tool").value === "write") {
       writePointer = { currentTarget: e.currentTarget, clientX: e.clientX, clientY: e.clientY };
       draw();
-    }
+    } else if ($("tool").value === "select" && currentTheme?.visual?.kMouseOver?.Value !== undefined) draw();
     return;
   }
   dragPointer = {
@@ -1007,7 +1080,7 @@ canvas.onpointerup = (e) => {
         (d.start.slot / d.start.division) *
           (starts[d.start.measure + 1] - starts[d.start.measure]));
   mutate(() =>
-    isPomuTheme(currentTheme)
+    isNineKeyLayout()
       ? putCaptured(chart, shiftVisibleNotes(d.notes, columns[d.start.lane].id, columns[p.lane].id, columns), { deltaBeat, copy: d.copy })
       : putCaptured(chart, d.notes, { deltaBeat, deltaColumn, copy: d.copy }),
   );
@@ -1035,7 +1108,7 @@ canvas.oncontextmenu = (e) => {
     const source = noteGroup(chart, n, $("lnstyle").value === "nt")[0];
     $("sample").value = source.value;
     $("sample").onchange();
-    status(`已选取音源 ${source.value}`);
+    status("已选取音源 {0}", source.value);
     return;
   }
   mutate(() => removeNoteGroup(chart, n, $("lnstyle").value === "nt"));
@@ -1049,10 +1122,9 @@ canvas.ondblclick = (e) => {
   editingNote = n;
   const source = noteGroup(chart, n, $("lnstyle").value === "nt")[0];
   const column = eventColumn(chart, source);
-  $("noteeditlabel").textContent =
-    column === 1 ? "BPM" : column === 2 ? "STOP" : "音符编号（按当前 BASE，62 区分大小写）";
+  ui.text($("noteeditlabel"), column === 1 ? "BPM" : column === 2 ? "STOP" : "音符编号（按当前 BASE，62 区分大小写）");
   $("noteeditvalue").value = String(numericValue(chart, source));
-  $("noteediterror").textContent = "";
+  ui.text($("noteediterror"), "");
   $("noteeditdialog").showModal();
 };
 $("noteeditcancel").onclick = () => $("noteeditdialog").close();
@@ -1070,7 +1142,7 @@ $("noteeditapply").onclick = () => {
   ) {
     editingNote = null;
     $("noteeditdialog").close();
-  } else $("noteediterror").textContent = $("status").textContent;
+  } else ui.copyText($("noteediterror"), $("status"));
 };
 for (const pane of panes) {
   pane.view.onscroll = () => {
@@ -1164,36 +1236,89 @@ for (const [slider, input] of [["zoomslider", "zoom"], ["widthslider", "widthzoo
   $(slider).onchange = persistPreferences;
 }
 let horizontalZoom = 1;
-$("widthzoom").onchange = () => {
-  const next = Number($("widthzoom").value);
+function changeHorizontalZoom(next, focusPane = null, anchor = 0) {
   if (!Number.isFinite(next) || next < 0.25 || next > 99) {
     $("widthzoom").value = horizontalZoom;
     status("横向缩放范围为 0.25–99");
     return;
   }
-  const positions = panes.map(p => p.view.scrollLeft / horizontalZoom);
+  const positions = panes.map(p => {
+    const x = p === focusPane ? anchor : 0;
+    return { x, position: (p.view.scrollLeft + x) / horizontalZoom };
+  });
   horizontalZoom = next;
+  $("widthzoom").value = next;
   rebuildColumns();
-  panes.forEach((p, i) => { p.view.scrollLeft = positions[i] * next; });
+  panes.forEach((p, i) => {
+    p.view.scrollLeft = Math.max(0, Math.min(contentWidth - p.view.clientWidth,
+      positions[i].position * next - positions[i].x));
+  });
   syncSidebarControls();
   draw();
-};
-$("zoom").onchange = () => {
-  const beat =
-    (height - 20 - $("viewport").scrollTop - $("viewport").clientHeight / 2) /
-    scale;
-  const zoom = Number($("zoom").value);
+}
+$("widthzoom").onchange = () => changeHorizontalZoom(Number($("widthzoom").value));
+function changeVerticalZoom(zoom, focusPane = null, anchor = 0) {
   if (!Number.isFinite(zoom) || zoom < 0.25 || zoom > 99) {
-    $("zoom").value = scale / 48;
+    $("zoom").value = scale / (48 * editorZoom);
     status("纵向缩放范围为 0.25–99");
     return;
   }
-  scale = zoom * 48;
+  const positions = panes.map(p => {
+    const offset = p === focusPane ? anchor : p.view.clientHeight / 2;
+    return { offset, beat: (height - editorInset() - p.view.scrollTop - offset) / scale };
+  });
+  scale = zoom * 48 * editorZoom;
+  $("zoom").value = zoom;
   syncSidebarControls();
   refresh();
-  $("viewport").scrollTop = y(beat) - $("viewport").clientHeight / 2;
+  panes.forEach((p, i) => {
+    p.view.scrollTop = Math.max(0, Math.min(height - p.view.clientHeight,
+      y(positions[i].beat) - positions[i].offset));
+    // Zoom moves every pane explicitly; queued scroll events must not move it again.
+    p.lastScrollTop = p.view.scrollTop;
+  });
   draw();
-};
+}
+$("zoom").onchange = () => changeVerticalZoom(Number($("zoom").value));
+function changeEditorZoom(percent, focusPane = null, anchorX = 0, anchorY = 0) {
+  if (!Number.isFinite(percent)) percent = editorZoom * 100;
+  const next = Math.max(50, Math.min(300, Math.round(percent))) / 100;
+  $("editorzoom").value = Math.round(next * 100);
+  if (next === editorZoom) return;
+  const pointerScreenY = focusPane ? focusPane.view.getBoundingClientRect().top + anchorY : null;
+  const positions = panes.map(p => {
+    const x = p === focusPane ? anchorX : p.view.clientWidth / 2;
+    const y = p === focusPane ? anchorY : p.view.clientHeight / 2;
+    return { x, y, column: (p.view.scrollLeft + x) / editorZoom,
+      beat: (height - editorInset() - p.view.scrollTop - y) / scale };
+  });
+  editorZoom = next;
+  scale = Number($("zoom").value) * 48 * editorZoom;
+  refresh();
+  panes.forEach((p, i) => {
+    const position = positions[i];
+    p.view.scrollLeft = Math.max(0, Math.min(contentWidth - p.view.clientWidth,
+      position.column * next - position.x));
+    p.view.scrollTop = Math.max(0, Math.min(height - p.view.clientHeight,
+      y(position.beat) - (p === focusPane ? pointerScreenY - p.view.getBoundingClientRect().top : p.view.clientHeight / 2)));
+    p.lastScrollTop = p.view.scrollTop;
+  });
+  draw();
+}
+$("editorzoom").onchange = () => changeEditorZoom(Number($("editorzoom").value));
+for (const pane of panes) {
+  pane.view.addEventListener("wheel", (event) => {
+    if (navigation?.wheel(event, pane)) return;
+    if (!event.ctrlKey) return;
+    event.preventDefault();
+    if (event.shiftKey || drag || !Number.isFinite(event.deltaY) || !event.deltaY) return;
+    const rect = pane.view.getBoundingClientRect();
+    changeEditorZoom(editorZoom * 100 + (event.deltaY < 0 ? 10 : -10), pane,
+      Math.max(0, Math.min(pane.view.clientWidth, event.clientX - rect.left)),
+      Math.max(0, Math.min(pane.view.clientHeight, event.clientY - rect.top)));
+    persistPreferences();
+  }, { passive: false });
+}
 function applySelectedMeasureRatio(ratio) {
   const selected = [...$("measurelist").selectedOptions].map(o => Number(o.value));
   const measures = selected.length ? selected : [Number($("measure").value)];
@@ -1202,13 +1327,13 @@ function applySelectedMeasureRatio(ratio) {
   if (ok) {
     $("ratio").value = String(ratio);
     const message = "已更新节拍";
-    status(message); $("measurefeedback").textContent = message;
-  } else $("measurefeedback").textContent = $("status").textContent;
+    status(message); ui.text($("measurefeedback"), message);
+  } else ui.copyText($("measurefeedback"), $("status"));
 }
 $("applysignature").onclick = () => {
   const n = Number($("beatnumerator").value), d = Number($("beatdenominator").value);
   if (!Number.isInteger(n) || !Number.isInteger(d) || n <= 0 || d <= 0) {
-    $("measurefeedback").textContent = "分子和分母必须为正整数";
+    ui.text($("measurefeedback"), "分子和分母必须为正整数");
     return;
   }
   applySelectedMeasureRatio(n/d);
@@ -1263,24 +1388,25 @@ $("measure").onchange = () => {
 $("jump").onclick = () => {
   const m = +$("measure").value;
   if (Number.isInteger(m) && m >= 0 && m <= 999) {
-    if (starts[m] * scale + 30 >= height)
+    if (starts[m] * scale + 30 * editorZoom >= height)
       setScrollExtent(Math.min(starts.at(-1), starts[m] + 2000 / 48));
-    $("viewport").scrollTop = y(starts[m]) - $("viewport").clientHeight + 30;
+    $("viewport").scrollTop = y(starts[m]) - $("viewport").clientHeight + 30 * editorZoom;
     draw();
   }
 };
 $("new").onclick = async () => {
-  if (dirty && !confirm("放弃尚未导出的修改？")) return;
+  if (dirty && !confirm(t("放弃尚未导出的修改？"))) return;
   await window.desktop?.newFile();
+  $("encoding").value = generalOptions.defaultencoding;
   stop();
-  chart = parseBMS("#BPM 120\n#LNTYPE 1");
-  resetBGMColumns();
-  $("saveformat").value = isPomuTheme(currentTheme) ? "pms" : "bms";
+  chart = initializeEditorMode(parseBMS("#PLAYER 1\n#BPM 120\n#LNTYPE 1"));
+  resetChartPositionStatus();
+  $("saveformat").value = "bms";
   history.reset(chart);
   dirty = false;
   buffers.clear();
   wavSelection = new Set(["01"]);
-  $("soundstatus").textContent = "";
+  ui.text($("soundstatus"), "");
   $("sounderrors").hidden = true;
   selected = null;
   selectedIds.clear();
@@ -1288,25 +1414,59 @@ $("new").onclick = async () => {
   $("viewport").scrollTop = height;
 };
 let openingFile = false;
+const pendingOpenWaiters = [];
 let themeBeforePMS;
-function applyFileDefaults(name) {
-  const pms = /\.pms$/i.test(name);
-  $("saveformat").value = /\.ibmscx$/i.test(name) ? "ibmscx" : /\.ibmsc$/i.test(name) ? "ibmsc" : pms ? "pms" : "bms";
-  if (pms) {
-    if (!isPomuTheme(currentTheme)) {
-      themeBeforePMS = currentTheme;
-      currentTheme = themes.Pomu;
-      $("theme").value = "Pomu";
-    }
-  } else if (themeBeforePMS !== undefined) {
-    currentTheme = themeBeforePMS;
-    themeBeforePMS = undefined;
-    $("theme").value = Object.keys(themes).find(name => themes[name] === currentTheme) || "";
-  }
+let presentedEditorMode = "SINGLE";
+function isNineKeyLayout() {
+  return editorMode(chart) === "PMS";
 }
-async function openNativeFile(recentPath, droppedFile) {
-  if (openingFile) return;
+function syncEditorModePresentation(force = false) {
+  const mode = editorMode(chart);
+  if (!force && mode === presentedEditorMode) return;
+  const wasPMS = presentedEditorMode === "PMS";
+  if (mode === "PMS") {
+    if (!wasPMS || !isPomuTheme(currentTheme)) themeBeforePMS = currentTheme;
+    currentTheme = themes.Pomu;
+    $("saveformat").value = "pms";
+  } else {
+    if (themeBeforePMS !== undefined || (wasPMS && isPomuTheme(currentTheme))) {
+      currentTheme = themeBeforePMS ?? themes.IIDX;
+      themeBeforePMS = undefined;
+    }
+    if ($("saveformat").value === "pms") $("saveformat").value = "bms";
+  }
+  presentedEditorMode = mode;
+  syncThemeChoices();
+}
+function syncEditorModeControl() {
+  const input = $("chartmode");
+  if (!input) return;
+  const selected = editorModeSelection(chart);
+  input.replaceChildren();
+  for (const [value, label] of editorModeChoices(chart)) {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = label;
+    option.selected = value === selected;
+    option.disabled = value.startsWith("legacy-");
+    input.append(option);
+  }
+  input.value = selected;
+}
+function applyFileDefaults(name) {
+  $("encoding").value = generalOptions.defaultencoding;
+  initializeEditorMode(chart, { pms: /\.pms$/i.test(name) });
+  syncEditorModePresentation(true);
+  $("saveformat").value = /\.ibmscx$/i.test(name) ? "ibmscx" : /\.ibmsc$/i.test(name) ? "ibmsc" : editorMode(chart) === "PMS" ? "pms" : "bms";
+}
+async function openNativeFile(recentPath, droppedFile, kind, requestedToken) {
+  if (openingFile) {
+    if (!requestedToken) return;
+    await new Promise(resolve => pendingOpenWaiters.push(resolve));
+    return openNativeFile(recentPath, droppedFile, kind, requestedToken);
+  }
   if (!window.desktop) {
+    $("file").accept = kind === "sm" ? ".sm" : kind === "ibmsc" ? ".ibmsc" : ".bms,.bme,.bml,.pms,.ibmsc,.ibmscx,.sm";
     $("file").click();
     return;
   }
@@ -1314,24 +1474,24 @@ async function openNativeFile(recentPath, droppedFile) {
   openingFile = true;
   const beforeOpen = JSON.stringify(chart);
   try {
-    if (dirty && !confirm("放弃尚未保存的修改？")) return;
-    file = droppedFile
+    if (dirty && !confirm(t("放弃尚未保存的修改？"))) return;
+    file = requestedToken ? await window.desktop.openRequestedFile(requestedToken) : droppedFile
       ? await window.desktop.openDropped(droppedFile)
       : recentPath
         ? await window.desktop.openRecent(recentPath)
-        : await window.desktop.open();
+        : await window.desktop.open(kind);
     if (!file) return;
     const next = await parseSelectedFile(file.name, file.bytes);
     if (!next) return;
     if (
       JSON.stringify(chart) !== beforeOpen &&
-      !confirm("打开文件期间谱面发生了修改，仍要替换当前谱面？")
+      !confirm(t("打开文件期间谱面发生了修改，仍要替换当前谱面？"))
     )
       return;
     const accepted = await window.desktop.acceptOpen(file.token);
     stop();
     chart = next;
-    resetBGMColumns();
+    resetChartPositionStatus();
     applyFileDefaults(file.name);
     history.reset(chart);
     buffers.clear();
@@ -1341,18 +1501,25 @@ async function openNativeFile(recentPath, droppedFile) {
     dirty = false;
     refresh();
     $("viewport").scrollTop = height;
-    status(accepted?.warning || "已打开 " + file.name);
+    if (accepted?.warning) status(accepted.warning);
+    else status("已打开 {0}", file.name);
     await refreshRecentFiles();
     await loadProjectSounds();
   } catch (e) {
     status(e.message);
   } finally {
-    openingFile = false;
     if (file?.token)
       await window.desktop.cancelOpen(file.token).catch(() => {});
+    openingFile = false;
+    for (const resolve of pendingOpenWaiters.splice(0)) resolve();
   }
 }
 $("open").onclick = () => openNativeFile();
+$("importsm").onclick = () => openNativeFile(null, null, "sm");
+$("importibmsc").onclick = () => openNativeFile(null, null, "ibmsc");
+$("quit").onclick = () => window.close();
+$("checkupdates").onclick = () => window.desktop?.website ? window.desktop.website() :
+    window.open("https://github.com/RM-801/ibmsc-node/releases", "_blank", "noopener");
 async function refreshRecentFiles() {
   const container = $("recentfiles");
   container.hidden = !window.desktop?.recent;
@@ -1377,10 +1544,10 @@ async function openBrowserFile(f) {
     const data = await f.arrayBuffer();
     const next = await parseSelectedFile(f.name, data);
     if (!next) return;
-    if (dirty && !confirm("放弃尚未导出的修改？")) return;
+    if (dirty && !confirm(t("放弃尚未导出的修改？"))) return;
     stop();
     chart = next;
-    resetBGMColumns();
+    resetChartPositionStatus();
     applyFileDefaults(f.name);
     history.reset(chart);
     buffers.clear();
@@ -1390,7 +1557,7 @@ async function openBrowserFile(f) {
     dirty = false;
     refresh();
     $("viewport").scrollTop = height;
-    status("已打开 " + f.name);
+    status("已打开 {0}", f.name);
   } catch (e) {
     status(e.message);
   } finally {
@@ -1402,8 +1569,23 @@ function confirmedSaveSnapshot(format = $("saveformat").value) {
   finishExpansionEdit();
   const snapshot = structuredClone(chart);
   if (["ibmsc", "ibmscx"].includes(format) || !bgmLongEvents(snapshot).length) return snapshot;
-  if (!confirm("BGM 区不可以在 BMS 中存放 LN/CN。继续保存会将这些长音符转为仅在起点播放的普通 BGM 音符，终点不会保存。编辑器中的暂存长条仍保留。是否继续？")) return null;
+  if (!confirm(t("BGM 区不可以在 BMS 中存放 LN/CN。继续保存会将这些长音符转为仅在起点播放的普通 BGM 音符，终点不会保存。编辑器中的暂存长条仍保留。是否继续？"))) return null;
   return flattenBGMLongs(snapshot);
+}
+function serializeForExport(snapshot) {
+  return serializeBMS(prepareBMSExport(snapshot, { maxGrid: generalOptions.maxgrid,
+    bpmExtended: generalOptions.bpmextended, stopExtended: generalOptions.stopextended }));
+}
+async function savedBeep() {
+  if (!generalOptions.beepsaved) return;
+  try {
+    if (window.desktop?.beep) { await window.desktop.beep(); return; }
+    const audio = await context(), oscillator = audio.createOscillator(), gain = audio.createGain();
+    oscillator.frequency.value = 880; gain.gain.value = 0.06;
+    oscillator.connect(gain); gain.connect(audio.destination);
+    oscillator.start(); oscillator.stop(audio.currentTime + 0.08);
+    oscillator.onended = () => { oscillator.disconnect(); gain.disconnect(); };
+  } catch { /* A disabled audio device must not turn a successful save into an error. */ }
 }
 function savePayload(snapshot) {
   const format = $("saveformat").value;
@@ -1414,7 +1596,7 @@ function savePayload(snapshot) {
       (format === "ibmscx" ? ".ibmscx" : format === "ibmsc" ? ".ibmsc" : format === "pms" ? ".pms" : ".bms"),
     ...(format === "ibmscx" ? { text: writePortableProject(snapshot) } : format === "ibmsc"
       ? { bytes: writeProject(snapshot) }
-      : { text: serializeBMS(snapshot) }),
+      : { text: serializeForExport(snapshot) }),
   };
 }
 $("save").onclick = async () => {
@@ -1428,9 +1610,12 @@ $("save").onclick = async () => {
         saveAs: false,
       });
       if (result) {
+        if (result.encoding) $("encoding").value = result.encoding;
         history.markSaved(saveSnapshot);
+        await savedBeep();
         refresh();
-        status(result.warning || "已保存 " + result.name);
+        if (result.warning) status(result.warning);
+        else status("已保存 {0}", result.name);
         await refreshRecentFiles();
       }
     } catch (e) {
@@ -1439,7 +1624,7 @@ $("save").onclick = async () => {
     return;
   }
   if ($("saveformat").value === "ibmscx") {
-    try { downloadText(writePortableProject(chart), (chart.headers.TITLE || "untitled") + ".ibmscx"); status("已开始下载"); }
+    try { downloadText(writePortableProject(chart), (chart.headers.TITLE || "untitled") + ".ibmscx"); status("已开始下载"); await savedBeep(); }
     catch (e) { status(e.message); }
     return;
   }
@@ -1449,8 +1634,11 @@ $("save").onclick = async () => {
   }
   const snapshot = confirmedSaveSnapshot("bms");
   if (!snapshot) return;
+  let bytes;
+  try { bytes = encodeBMS(serializeForExport(snapshot), $("encoding").value); }
+  catch (e) { status(e.message); return; }
   const url = URL.createObjectURL(
-      new Blob([serializeBMS(snapshot)], { type: "text/plain;charset=utf-8" }),
+      new Blob([bytes], { type: "application/octet-stream" }),
     ),
     a = document.createElement("a");
   a.href = url;
@@ -1460,6 +1648,7 @@ $("save").onclick = async () => {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
   refresh();
   status("已开始下载");
+  await savedBeep();
 };
 async function context() {
   audio ??= new AudioContext();
@@ -1468,17 +1657,8 @@ async function context() {
 }
 async function preview(name) {
   try {
-    await context();
-    const b = buffers.get(name.toLowerCase().replaceAll("\\", "/"));
-    if (!b) {
-      status("请先加载音源文件");
-      return;
-    }
-    const s = audio.createBufferSource();
-    s.buffer = b;
-    s.connect(audio.destination);
-    s.start();
-    sources.push(s);
+    const buffer = name && buffers.get(name.toLowerCase().replaceAll("\\", "/"));
+    await keyPreview.play(buffer);
   } catch (e) {
     status(e.message);
   }
@@ -1486,7 +1666,7 @@ async function preview(name) {
 $("audiofiles").onclick = () =>
   window.desktop ? loadProjectSounds() : $("sounds").click();
 if (window.desktop) {
-  $("audiofiles").textContent = "重新关联音源";
+  ui.text($("audiofiles"), "重新关联音源");
 }
 async function loadBrowserSounds(files) {
   try {
@@ -1494,7 +1674,7 @@ async function loadBrowserSounds(files) {
     let failed = 0;
     for (const f of files) {
       try {
-        const decoded = await audio.decodeAudioData(await f.arrayBuffer());
+        const decoded = await decodeAudio(audio, await f.arrayBuffer());
         buffers.set(f.name.toLowerCase(), decoded);
         for (const name of Object.values(chart.resources.WAV)) {
           if (
@@ -1519,7 +1699,7 @@ async function loadBrowserSounds(files) {
       }
     }
     refresh();
-    status(`已加载 ${buffers.size} 个音源；失败 ${failed} 个`);
+    status("已加载 {0} 个音源；失败 {1} 个", buffers.size, failed);
   } catch (e) {
     status(e.message);
   } finally {
@@ -1570,7 +1750,7 @@ async function startPlayback(fromBeat = 0) {
       if (next === notes.length && audio.currentTime >= end) {
         stop();
         draw();
-        $("playstatus").textContent = "播放结束；缺失音源 " + missing + " 个";
+        ui.text($("playstatus"), "播放结束；缺失音源 {0} 个", missing);
       }
     };
     const frame = () => {
@@ -1588,8 +1768,7 @@ async function startPlayback(fromBeat = 0) {
     if (playClock) {
       playTimer = setInterval(schedule, 50);
       frame();
-      $("playstatus").textContent =
-        "播放中，从第 " + fromBeat.toFixed(3) + " 拍开始";
+      ui.text($("playstatus"), "播放中，从第 {0} 拍开始", fromBeat.toFixed(3));
     }
   } catch (e) {
     stop();
@@ -1597,21 +1776,45 @@ async function startPlayback(fromBeat = 0) {
   }
 }
 $("play").onclick = () => startPlayback();
-$("playhere").onclick = () =>
-  startPlayback(starts[Number($("measure").value)] || 0);
+$("playhere").onclick = () => startPlayback(starts[Number($("measure").value)] || 0);
 $("stop").onclick = () => {
   stop();
   draw();
 };
 let keyboardPane = panes[0];
+navigation = createChartNavigation({ panes, options: () => ({ ...generalOptions,
+  tool: $("tool").value, middleRelease: visualNumber(currentTheme, "MiddleDeltaRelease", 1) }),
+  scale: () => scale, height: () => height, activate: pane => { keyboardPane = pane; },
+  draw, stopPreview: () => keyPreview.stop() });
 for (const pane of panes) {
   pane.canvas.tabIndex = 0;
-  pane.canvas.addEventListener("pointerdown", () => {
-    keyboardPane = pane;
-    pane.canvas.focus?.({ preventScroll: true });
-  });
+  for (const [event, handler] of [["onpointerdown", "down"], ["onpointermove", "move"],
+    ["onpointerup", "up"], ["oncontextmenu", "context"]]) {
+    const original = pane.canvas[event];
+    pane.canvas[event] = e => { if (!navigation[handler](e)) return original(e); };
+  }
+  pane.canvas.addEventListener("pointerenter", e => navigation.enter(e));
+  pane.canvas.addEventListener("pointercancel", () => navigation.stop());
 }
+window.addEventListener("blur", () => navigation.stop());
+window.addEventListener("pointermove", e => {
+  if (navigation.isAuto() && !panes.some(pane => pane.canvas === e.target)) navigation.move(e);
+});
+window.addEventListener("pointerdown", e => {
+  if (navigation.isAuto() && !panes.some(pane => pane.canvas === e.target)) {
+    navigation.stop(); e.preventDefault(); e.stopImmediatePropagation();
+  }
+}, true);
+window.addEventListener("wheel", e => {
+  if (navigation.isAuto() && !panes.some(pane => pane.view.contains?.(e.target))) navigation.stop();
+}, { passive: true });
 window.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") navigation.stop();
+  if (e.key === "Escape" && viewMenuOpen) {
+    e.preventDefault();
+    closeViewMenu();
+    return;
+  }
   if (e.key === "Escape") {
     const openMenu = mainMenus.find((menu) => menu.open);
     if (openMenu) {
@@ -1623,6 +1826,13 @@ window.addEventListener("keydown", (e) => {
   }
   if (e.defaultPrevented || e.target.isContentEditable) return;
   if (document.querySelector("dialog[open]")) return;
+  if (e.key === "F10" && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
+    e.preventDefault();
+    if (viewMenuOpen) closeViewMenu();
+    else openViewMenu();
+    return;
+  }
+  if (viewMenuOpen) return;
   // Measure controls target chart paste; text fields retain native clipboard editing.
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "v" &&
       [$("measure"), $("measurelist")].includes(e.target)) {
@@ -1728,12 +1938,6 @@ window.addEventListener("keydown", (e) => {
       persistPreferences();
       draw();
     }
-    if (k === "/") {
-      e.preventDefault();
-      $("grid").value = $("slashgrid").value;
-      persistPreferences();
-      draw();
-    }
     if (k === "l" || k === "s") {
       e.preventDefault();
       $("conversion").value = k === "l" ? "long" : "short";
@@ -1763,7 +1967,7 @@ window.addEventListener("keydown", (e) => {
                   last,
                   view.scrollTop +
                     (e.key === "PageUp" ? -1 : 1) *
-                      (Number($("pageunits").value) / 48) *
+                      (generalOptions.pageunits / 48) *
                       scale,
                 ),
               );
@@ -1812,14 +2016,9 @@ refresh();
 $("viewport").scrollTop = height;
 status("");
 
-$("show2p").onchange = () => {
-  if (isPomuTheme(currentTheme)) return;
-  mutate(() => {
-    chart.headers.PLAYER = $("show2p").checked ? "3" : "1";
-  });
-};
 for (const id of ["showbpm", "showstop", "showbga", "bgmcount"])
   $(id).onchange = () => {
+    if (id === "bgmcount") bgmMinimum = Math.min(999, Math.max(1, Math.trunc(Number($(id).value)) || 15));
     rebuildColumns();
     const visible = new Set(columns.filter(c => c.channel).map(c => c.id));
     selectedIds = new Set(events(chart).filter(n => selectedIds.has(eventId(n)) &&
@@ -1831,23 +2030,24 @@ $("sourceopen").onclick = () => {
   const snapshot = confirmedSaveSnapshot("bms");
   if (!snapshot) return;
   $("source").value = serializeBMS(snapshot);
+  ui.text($("sourceerror"), "");
   $("sourcedialog").showModal();
 };
 $("sourcecancel").onclick = () => $("sourcedialog").close();
 $("sourceapply").onclick = () => {
   try {
-    const next = parseBMS($("source").value);
+    const next = initializeEditorMode(parseBMS($("source").value), { pms: editorMode(chart) === "PMS" });
     if (
       !mutate(() => {
         chart = next;
-        resetBGMColumns();
+        resetChartPositionStatus();
       })
     )
       return;
     $("sourcedialog").close();
     status("已应用修改");
   } catch (e) {
-    $("sourceerror").textContent = e.message;
+    ui.text($("sourceerror"), e.message);
   }
 };
 $("definitionapply").onclick = () => {
@@ -1870,9 +2070,12 @@ $("definitionapply").onclick = () => {
     status("BPM 必须大于零，STOP 不得为负");
     return;
   }
-  mutate(() => (chart.resources[type][id] = value));
+  mutate(() => {
+    if (type === "BMP") setBMPDefinition(chart, id, value);
+    else chart.resources[type][id] = value;
+  });
   $("sample").value = id;
-  status("已更新 #" + type + id);
+  status("已更新 #{0}{1}", type, id);
 };
 
 let copiedRows = [], copiedRowsBase = 36, noteClipboardBase = 36, copiedRowsSource = null, noteClipboardSource = null;
@@ -1881,7 +2084,7 @@ $("copyrange").onclick = () => {
   try {
     copiedRows = copyMeasures(chart, ...range(), activeChannels);
     copiedRowsBase = chartBase(chart); copiedRowsSource = structuredClone(chart);
-    status("已复制全部轨道 " + copiedRows.length + " 行");
+    status("已复制全部轨道 {0} 行", copiedRows.length);
   } catch (e) {
     status(e.message);
   }
@@ -1894,7 +2097,7 @@ $("pasterange").onclick = () => {
   mutate(() => pasteMeasures(chart, copiedRowsBase === chartBase(chart) ? copiedRows : remapClipboardRows(chart, copiedRowsSource, copiedRows), Number($("measure").value)));
 };
 $("mirrorrange").onclick = () =>
-  mutate(() => mirrorMeasures(chart, ...range(), activeChannels, isPomuTheme(currentTheme) ? pomuChannels : null));
+  mutate(() => mirrorMeasures(chart, ...range(), activeChannels, isNineKeyLayout() ? pomuChannels : null));
 $("deleterange").onclick = () =>
   mutate(() => deleteMeasures(chart, ...range(), activeChannels));
 
@@ -1904,8 +2107,8 @@ $("removemeasure").onclick = () =>
   mutate(() => removeMeasure(chart, Number($("measure").value)));
 function report(title, text) {
   $("statstable").hidden = true;
-  $("reporttitle").textContent = title;
-  $("reporttext").textContent = text;
+  ui.text($("reporttitle"), title);
+  ui.raw($("reporttext"), text);
   $("reporttext").hidden = !text;
   $("reportdialog").showModal();
 }
@@ -1917,10 +2120,10 @@ $("statistics").onclick = () => {
   table.replaceChildren();
   const header = document.createElement("tr");
   for (const title of ["轨道", ...s.columns]) {
-    const cell = document.createElement("th"); cell.textContent = title; header.append(cell);
+    const cell = document.createElement("th"); ui.text(cell, title); header.append(cell);
   }
   table.append(header);
-  const displayRows = isPomuTheme(currentTheme) ? pomuStatisticsRows(s, currentTheme) : s.rows.flatMap((name, i) => i === 2
+  const displayRows = isNineKeyLayout() ? pomuStatisticsRows(s, currentTheme) : s.rows.flatMap((name, i) => i === 2
     ? [...s.aLanes, { name: "A1–A8 小计", counts: s.data[i], subtotal: true }]
     : i === 3 && s.showD
       ? [...s.dLanes, { name: "D1–D8 小计", counts: s.data[i], subtotal: true }]
@@ -1928,7 +2131,7 @@ $("statistics").onclick = () => {
   displayRows.forEach(({ name, counts, subtotal }) => {
     const row = document.createElement("tr");
     if (subtotal) row.className = "statistics-subtotal";
-    const label = document.createElement("th"); label.textContent = name; row.append(label);
+    const label = document.createElement("th"); ui.text(label, name); row.append(label);
     for (const value of counts) {
       const cell = document.createElement("td"); cell.textContent = String(value); row.append(cell);
     }
@@ -1938,69 +2141,55 @@ $("statistics").onclick = () => {
 };
 $("errorcheck").onclick = () => {
   const list = diagnose(chart);
-  report(
-    "错误检查",
-    list.length
-      ? list
-          .map(
-            (i) =>
-              `#${String(i.event.measure).padStart(3, "0")} ${i.event.channel} ${i.event.value}：${i.message}`,
-          )
-          .join("\n")
-      : "未发现重叠、缺失定义或未配对长音符",
-  );
+  report("错误检查", "");
+  if (list.length) ui.rows($("reporttext"), list.map(i => ({
+    prefix: `#${String(i.event.measure).padStart(3, "0")} ${i.event.channel} ${i.event.value}：`,
+    source: i.message,
+  })));
+  else ui.text($("reporttext"), "未发现重叠、缺失定义或未配对长音符");
+  $("reporttext").hidden = false;
 };
-$("findopen").onclick = () => $("finddialog").showModal();
-$("findclose").onclick = () => $("finddialog").close();
-function matches() {
-  const value = normalizeId(chart, $("findvalue").value),
-    ch = $("findchannel").value.toUpperCase();
-  return events(chart).filter(
-    (e) => (!value || e.value === value) && (!ch || e.channel === ch),
-  );
+let findEditor;
+function findError(error) {
+  $("finderror").hidden = !error;
+  ui.text($("finderror"), error?.message || "");
 }
-$("findnext").onclick = () => {
-  const found = matches();
-  if (!found.length) {
-    status("没有匹配事件");
-    return;
+function runFindAction(action, criteria, value) {
+  try {
+    const options = { selectedIds, nt: $("lnstyle").value === "nt",
+      enabledColumns: columns.filter(c => c.channel && c.width > 0).map(c => c.id), value };
+    let result;
+    if (["select", "unselect"].includes(action)) {
+      result = applyFindOperation(chart, criteria, action, options);
+    } else {
+      let operationError;
+      if (!mutate(() => {
+        try { result = applyFindOperation(chart, criteria, action, options); }
+        catch (e) { operationError = e; throw e; }
+      })) { findError(operationError); return; }
+    }
+    selected = null; selectedIds = result.selectedIds;
+    draw(); findError(null); status("已处理 {0} 个音符", result.count);
+  } catch (e) { findError(e); }
+}
+$("findopen").onclick = () => {
+  closeMainMenus();
+  const bgmCount = Math.max(maxBGM(chart), ...columns.filter(c => c.id >= 26).map(c => c.id - 25), 1);
+  if (!findEditor) {
+    findEditor = createFindReplace({ root: $("findeditor"), ui, onAction: runFindAction, onError: findError });
+    findEditor.load(createFindCriteria(chart, bgmCount));
   }
-  const n =
-    found[
-      (found.findIndex(
-        (e) => e.row === selected?.row && e.index === selected?.index,
-      ) +
-        1) %
-        found.length
-    ];
-  selected = n;
-  $("viewport").scrollTop = y(n.beat) - $("viewport").clientHeight / 2;
-  const col = columns[laneOf(n)];
-  if (col) $("viewport").scrollLeft = Math.max(0, col.left - 80);
-  draw();
-  status("找到 " + found.length + " 个匹配事件");
+  const enabled = new Set(columns.map(c => c.id));
+  findEditor.setColumns(originalColumns({ bgm: bgmCount }).filter(c => c.channel).map(c => ({
+    id: c.id, title: columns.find(visible => visible.id === c.id)?.title || (c.id < 26 ? currentTheme?.columns.find(style => Number(style.Index) === c.id)?.Title : null) || c.title,
+    enabled: enabled.has(c.id),
+  })));
+  findEditor.setBase(chartBase(chart));
+  findError(null); $("finddialog").showModal();
 };
-$("replaceall").onclick = () => {
-  const value = normalizeId(chart, $("replacevalue").value);
-  if (!validId(chart, value) || value === "00") {
-    status("替换编号超出当前 BASE 范围");
-    return;
-  }
-  const found = matches();
-  if (found.some((e) => e.channel === "03" && !/^[0-9A-F]{2}$/.test(value))) {
-    status("BPM 03 只能使用十六进制编号");
-    return;
-  }
-  mutate(() =>
-    found.forEach((e) => (chart.rows[e.row].cells[e.index] = value)),
-  );
-};
-$("deletefound").onclick = () => {
-  const found = matches();
-  mutate(() => found.forEach((e) => (chart.rows[e.row].cells[e.index] = "00")));
-};
+$("findclose").onclick = () => $("finddialog").close();
 
-$("projectexport").onclick = () => {
+$("projectexport").onclick = async () => {
   try {
     const url = URL.createObjectURL(new Blob([writeProject(chart)])),
       a = document.createElement("a");
@@ -2009,6 +2198,7 @@ $("projectexport").onclick = () => {
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
     status("已导出 IBMSC");
+    await savedBeep();
   } catch (e) {
     status(e.message);
   }
@@ -2025,7 +2215,7 @@ $("copynotes").onclick = () => {
   noteClipboardBase = chartBase(chart); noteClipboardSource = structuredClone(chart);
   noteClipboard = captured.map(n => ({ ...n, beat: n.beat - origin }));
   pasteTarget = null;
-  status("已复制 " + noteClipboard.length + " 个音符");
+  status("已复制 {0} 个音符", noteClipboard.length);
 };
 $("deletenotes").onclick = () => {
   const list = captureNotes(chart, selectedIds);
@@ -2042,7 +2232,7 @@ $("pastenotes").onclick = () => {
   if (!noteClipboard.length) return;
   const view = keyboardPane.view;
   // Form1.AddNotes: MeasureBottom(InMeasure(-spV(spFocus)) + 1).
-  const bottomBeat = (height - 20 - view.scrollTop - view.clientHeight) / scale;
+  const bottomBeat = (height - editorInset() - view.scrollTop - view.clientHeight) / scale;
   const visibleMeasure = starts.findIndex(b => b > bottomBeat + 1e-9);
   const explicit = pasteTarget?.chart === chart && pasteTarget.pane === keyboardPane &&
     pasteTarget.top === view.scrollTop;
@@ -2057,7 +2247,7 @@ $("pastenotes").onclick = () => {
       eventColumn(chart, n) === c.column && Math.abs(n.beat - c.beat - offset) < 1e-8
     )).map(eventId));
     draw();
-    status(`已粘贴 ${noteClipboard.length} 个音符至 ${String(measure).padStart(3, "0")} 小节`);
+    status("已粘贴 {0} 个音符至 {1} 小节", noteClipboard.length, String(measure).padStart(3, "0"));
   }
 };
 $("convertnotes").onclick = () => {
@@ -2065,7 +2255,7 @@ $("convertnotes").onclick = () => {
   const type = $("conversion").value;
   if (!notes.length) return;
   if (type === "mirror") {
-    mutate(() => mirrorCaptured(chart, notes, isPomuTheme(currentTheme) ? pomuColumns : null));
+    mutate(() => mirrorCaptured(chart, notes, isNineKeyLayout() ? pomuColumns : null));
     return;
   }
   const options =
@@ -2092,8 +2282,8 @@ async function loadProjectSounds() {
   let loaded = 0;
   const errors = [];
   $("sounderrors").hidden = true;
-  $("sounderrorlist").textContent = "";
-  $("soundstatus").textContent = "正在自动关联音源…";
+  ui.raw($("sounderrorlist"), "");
+  ui.text($("soundstatus"), "正在自动关联音源…");
   try {
     if (names.length) audio ??= new AudioContext();
     for (const name of names) {
@@ -2102,7 +2292,7 @@ async function loadProjectSounds() {
       try {
         const data = await window.desktop.asset(name);
         if (!active()) return;
-        const decoded = await audio.decodeAudioData(
+        const decoded = await decodeAudio(audio,
           new Uint8Array(data).buffer,
         );
         if (!active()) return;
@@ -2111,22 +2301,22 @@ async function loadProjectSounds() {
       } catch (e) {
         if (!active()) return;
         buffers.delete(key);
-        errors.push(name + "：" + e.message);
+        errors.push({ prefix: name + "：", source: e.message });
       }
     }
     if (!active()) return;
     refresh();
     const message = names.length
-      ? `音源已关联：${loaded} 个；未能加载：${errors.length} 个`
+      ? "音源已关联：{0} 个；未能加载：{1} 个"
       : "谱面未定义音源";
-    $("soundstatus").textContent = message;
+    ui.text($("soundstatus"), message, loaded, errors.length);
     $("sounderrors").hidden = !errors.length;
-    $("sounderrorlist").textContent = errors.join("\n");
-    status(message);
+    ui.rows($("sounderrorlist"), errors);
+    status(message, loaded, errors.length);
   } catch (e) {
     if (active()) {
-      $("soundstatus").textContent = "音源关联失败：" + e.message;
-      status($("soundstatus").textContent);
+      ui.text($("soundstatus"), "音源关联失败：{0}", e.message);
+      ui.copyText($("status"), $("soundstatus"));
     }
   }
 }
@@ -2144,9 +2334,12 @@ $("saveas").onclick = async () => {
       saveAs: true,
     });
     if (result) {
+      if (result.encoding) $("encoding").value = result.encoding;
       history.markSaved(saveSnapshot);
+      await savedBeep();
       refresh();
-      status(result.warning || "已另存为 " + result.name);
+      if (result.warning) status(result.warning);
+      else status("已另存为 {0}", result.name);
       await refreshRecentFiles();
     }
   } catch (e) {
@@ -2163,49 +2356,67 @@ $("recover").onclick = async () => {
       return;
     }
     const recovered = text.startsWith('{"format":"ibmsc-recovery-v1"')
-      ? validateProjectChart(JSON.parse(text).chart) : parseBMS(text);
+      ? migrateExpansion(validateProjectChart(JSON.parse(text).chart)) : parseBMS(text);
     await window.desktop?.newFile();
     mutate(() => {
-      chart = recovered;
-      resetBGMColumns();
+      chart = initializeEditorMode(recovered);
+      syncEditorModePresentation(true);
+      $("saveformat").value = editorMode(chart) === "PMS" ? "pms" : "bms";
+      resetChartPositionStatus();
     });
     status("已恢复自动保存内容，请另存为文件");
   } catch (e) {
     status(e.message);
   }
 };
-setInterval(async () => {
-  if (!dirty || !$("autosave").checked) return;
-  try {
-    const text = JSON.stringify({ format: "ibmsc-recovery-v1", chart });
-    if (window.desktop) await window.desktop.autosave(text);
-    else localStorage.setItem("ibmsc-recovery", text);
-  } catch (e) {
-    status("自动保存失败：" + e.message);
-  }
-}, 60000);
-
+let autosaveTimer = null;
+function restartAutosave() {
+  if (autosaveTimer !== null) clearInterval(autosaveTimer);
+  autosaveTimer = generalOptions.autosave ? setInterval(async () => {
+    if (!dirty) return;
+    try {
+      const text = JSON.stringify({ format: "ibmsc-recovery-v1", chart });
+      if (window.desktop) await window.desktop.autosave(text);
+      else localStorage.setItem("ibmsc-recovery", text);
+    } catch (e) { status("自动保存失败：{0}", e.message); }
+  }, generalOptions.autosaveminutes * 60000) : null;
+}
+restartAutosave();
 function syncHeaderControl(key, input) {
-  const value = chart.headers[key] ?? (key === "PLAYER" ? "1" : "");
+  const value = chart.headers[key] ?? "";
   if (headerChoices[key]) {
     const choices = [...headerChoices[key]];
     if (!choices.some(([id]) => id === value))
-      choices.push([value, `原文件值：${value}`]);
+      choices.push([value, null]);
     input.replaceChildren();
     for (const [id, label] of choices) {
       const option = document.createElement("option");
       option.value = id;
-      option.textContent = label;
+      if (label === null) ui.text(option, "原文件值：{0}", value);
+      else ui.text(option, label);
       option.selected = id === value;
       input.append(option);
     }
   }
   input.value = value;
 }
+const modeLabel = document.createElement("label");
+modeLabel.id = "chart-mode-label";
+const modeCaption = document.createElement("span");
+ui.text(modeCaption, "谱面类型");
+const modeInput = document.createElement("select");
+modeInput.id = "chartmode";
+modeLabel.append(modeCaption, modeInput);
+$("primaryheaders").append(modeLabel);
+syncEditorModeControl();
+modeInput.onchange = () => {
+  const mode = modeInput.value;
+  if (!["SINGLE", "DOUBLE", "PMS"].includes(mode)) { syncEditorModeControl(); return; }
+  mutate(() => setEditorMode(chart, mode));
+};
 const extraHeaders = [
   "SUBTITLE",
   "SUBARTIST",
-  "PLAYER",
   "RANK",
   "DIFFICULTY",
   "EXRANK",
@@ -2218,8 +2429,9 @@ const extraHeaders = [
 ];
 for (const key of extraHeaders) {
   const label = document.createElement("label");
-  if (key === "PLAYER") label.id = "header-player-label";
-  label.textContent = headerLabels[key] || key;
+  const caption = document.createElement("span");
+  ui.text(caption, headerLabels[key] || key);
+  label.append(caption);
   const input = document.createElement(headerChoices[key] ? "select" : "input");
   input.id = "header-" + key;
   syncHeaderControl(key, input);
@@ -2242,7 +2454,7 @@ for (const key of extraHeaders) {
     });
   };
   label.append(input);
-  $(["PLAYER", "RANK"].includes(key) ? "primaryheaders" : "extraheaders").append(label);
+  $(key === "RANK" ? "primaryheaders" : "extraheaders").append(label);
 }
 
 function argb(value) {
@@ -2250,18 +2462,31 @@ function argb(value) {
   return `rgba(${(n >>> 16) & 255},${(n >>> 8) & 255},${n & 255},${(n >>> 24) / 255})`;
 }
 for (const [name, metadata] of Object.entries(themeMetadata)) if (themes[name]) Object.assign(themes[name], metadata);
-for (const name of Object.keys(themes)) {
-  const option = document.createElement("option");
-  option.value = name;
-  option.textContent = name;
-  $("theme").append(option);
+let customTheme = null;
+function themeChoice() {
+  if (!currentTheme) return "IIDX";
+  return Object.keys(themes).find(name => themes[name] === currentTheme ||
+    JSON.stringify(themes[name]) === JSON.stringify(currentTheme)) || "custom";
+}
+function syncThemeChoices() {
+  const select = $("theme");
+  select.replaceChildren();
+  const choices = Object.keys(themes).map(name => [name, name]);
+  if (customTheme) choices.push(["custom", "自定义"]);
+  for (const [value, label] of choices) {
+    const option = document.createElement("option"); option.value = value;
+    if (value === "custom") ui.text(option, label); else option.textContent = label;
+    select.append(option);
+  }
+  select.value = themeChoice();
+  populateChoiceMenu("theme-menu", choices, value => {
+    select.value = value; select.onchange();
+  }, () => select.value);
 }
 $("theme").onchange = () => {
   themeBeforePMS = undefined;
-  currentTheme = themes[$("theme").value] || null;
-  persistTheme();
-  rebuildColumns();
-  draw();
+  currentTheme = ($("theme").value === "custom" ? customTheme : themes[$("theme").value]) || themes.IIDX;
+  persistTheme(); syncThemeChoices(); rebuildColumns(); draw();
 };
 $("themeimport").onclick = () => $("themefile").click();
 $("themefile").onchange = async () => {
@@ -2270,34 +2495,13 @@ $("themefile").onchange = async () => {
     if (!f) return;
     const text = decodeXML(await f.arrayBuffer());
     const xml = new DOMParser().parseFromString(text, "application/xml");
-    if (xml.querySelector("parsererror")) throw Error("主题 XML 无效");
-    const cols = [...xml.querySelectorAll("Columns > Column")].map((e) =>
-      Object.fromEntries([...e.attributes].map((a) => [a.name, a.value])),
-    );
-    if (
-      !cols.length ||
-      cols.some(
-        (c) =>
-          !Number.isInteger(+c.Index) ||
-          !Number.isFinite(+c.Width) ||
-          +c.Width < 0 ||
-          +c.Width > 500,
-      )
-    )
-      throw Error("主题列定义无效");
-    const visual = Object.fromEntries([...xml.querySelectorAll("VisualSettings > *")].map(e => [e.tagName, Object.fromEntries([...e.attributes].map(a => [a.name, a.value]))]));
-    validateVisual(visual);
-    currentTheme = { columns: cols, visual, sourceXml: text };
+    const imported = readThemeDocument(xml, text);
+    currentTheme = customTheme = imported;
     themeBeforePMS = undefined;
-    persistTheme();
-    rebuildColumns();
-    draw();
-    status("已载入主题 " + f.name);
-  } catch (e) {
-    status(e.message);
-  } finally {
-    $("themefile").value = "";
-  }
+    persistTheme(); syncThemeChoices(); rebuildColumns(); draw();
+    status("已载入主题 {0}", f.name);
+  } catch (e) { status(e.message); }
+  finally { $("themefile").value = ""; }
 };
 async function parseSelectedFile(name, bytes) {
   if (/\.ibmscx$/i.test(name)) return readPortableProject(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
@@ -2347,7 +2551,7 @@ function drawWaveform(name) {
   c.fillStyle = "#080808";
   c.fillRect(0, 0, w, h);
   if (!buffer) {
-    $("waveinfo").textContent = "未加载音源";
+    ui.text($("waveinfo"), "未加载音源");
     return;
   }
   const peaks = waveformPeaks(buffer.getChannelData(0), w);
@@ -2358,8 +2562,7 @@ function drawWaveform(name) {
     c.lineTo(i, h / 2 - max * h * 0.45);
   });
   c.stroke();
-  $("waveinfo").textContent =
-    `${name} · ${buffer.duration.toFixed(3)} s · ${buffer.sampleRate} Hz`;
+  ui.raw($("waveinfo"), `${name} · ${buffer.duration.toFixed(3)} s · ${buffer.sampleRate} Hz`);
 }
 $("sample").onchange = () => {
   const id = normalizeId(chart, $("sample").value);
@@ -2406,11 +2609,16 @@ for (const side of ["left", "right"])
 const toolModes = ["time", "select", "write"];
 function syncToolButtons() {
   refreshPositionStatus();
-  for (const mode of toolModes)
+  for (const mode of toolModes) {
+    document.querySelectorAll(`[data-action="tool-${mode}"]`).forEach(button => {
+      button.setAttribute("role", "menuitemradio");
+      button.setAttribute("aria-checked", String($("tool").value === mode));
+    });
     $("tool-" + mode).setAttribute(
       "aria-pressed",
       String($("tool").value === mode),
     );
+  }
 }
 for (const mode of toolModes)
   $("tool-" + mode).onclick = () => {
@@ -2420,9 +2628,165 @@ for (const mode of toolModes)
 $("tool").onchange = syncToolButtons;
 syncToolButtons();
 
+let myo2Scan = null;
+const myo2Options = () => ({ nt: $("lnstyle").value === "nt", titles: Object.fromEntries(columns.map(c => [c.id, c.title])) });
+function scanMyO2() {
+  finishExpansionEdit();
+  const options = myo2Options();
+  const items = checkMyO2Grid(chart, options);
+  myo2Scan = { snapshot: JSON.stringify(chart), options, items };
+  $("myo2results").replaceChildren();
+  for (const item of items) {
+    const row = document.createElement("tr");
+    for (const value of [String(item.measure).padStart(3, "0"), item.title, item.grid,
+      item.long ? "✓" : "", item.hidden ? "✓" : "", null, item.d64, item.d48]) {
+      const cell = document.createElement("td");
+      if (value === null) {
+        const check = document.createElement("input"); check.type = "checkbox";
+        check.checked = item.to64; ui.attribute(check, "aria-label", "{0} {1} 调整到64线", item.measure, item.title);
+        check.onchange = () => { item.to64 = check.checked; };
+        cell.append(check);
+      } else cell.textContent = String(value);
+      row.append(cell);
+    }
+    $("myo2results").append(row);
+  }
+  $("myo2adjust").disabled = !items.length;
+  ui.text($("myo2message"), items.length ? "发现 {0} 项" : "未发现超过 64 线的格数", items.length);
+}
+$("myo2").onclick = () => {
+  closeMainMenus(); myo2Scan = null;
+  $("myo2bpm").value = chart.headers.BPM;
+  $("myo2results").replaceChildren(); $("myo2adjust").disabled = true;
+  ui.text($("myo2message"), "");
+  $("myo2dialog").showModal();
+};
+$("myo2check").onclick = scanMyO2;
+$("myo2constant").onclick = () => {
+  if (mutate(() => { chart = constantBPM(chart, Number($("myo2bpm").value)); })) {
+    myo2Scan = null; $("myo2results").replaceChildren(); $("myo2adjust").disabled = true;
+    ui.text($("myo2message"), "已恒速化");
+  } else ui.copyText($("myo2message"), $("status"));
+};
+$("myo2adjust").onclick = () => {
+  if (!myo2Scan || myo2Scan.snapshot !== JSON.stringify(chart) || myo2Scan.options.nt !== myo2Options().nt) {
+    ui.text($("myo2message"), "谱面已改变，请重新检查"); $("myo2adjust").disabled = true; return;
+  }
+  if (mutate(() => { chart = adjustMyO2Grid(chart, myo2Scan.items, myo2Scan.options); })) {
+    scanMyO2(); ui.text($("myo2message"), "已调整");
+  } else ui.copyText($("myo2message"), $("status"));
+};
 const mainMenus = [...document.querySelectorAll("header nav details.menu")];
+let viewMenuOpen = false;
+function openViewMenu() {
+  closeMainMenus();
+  const menu = $("viewmenu");
+  const anchor = $("view-toggle").getBoundingClientRect();
+  // F10 still opens the same controls when the menu and toolbar are both hidden.
+  const anchorVisible = $("show-menu").checked && !window.desktop?.nativeMenu;
+  const left = anchorVisible ? anchor.left : 4;
+  const top = anchorVisible ? anchor.bottom : 4;
+  menu.style.left = "0px";
+  menu.style.top = "0px";
+  if (!viewMenuOpen) menu.showPopover();
+  viewMenuOpen = true;
+  $("view-toggle").setAttribute("aria-expanded", "true");
+  const bounds = menu.getBoundingClientRect();
+  menu.style.left = Math.max(4, Math.min(left, window.innerWidth - bounds.width - 4)) + "px";
+  menu.style.top = Math.max(4, Math.min(top, window.innerHeight - bounds.height - 4)) + "px";
+  menu.querySelector("input:not(:disabled)")?.focus();
+}
+function closeViewMenu(restoreFocus = true) {
+  $("viewmenu").hidePopover();
+  viewMenuOpen = false;
+  $("view-toggle").setAttribute("aria-expanded", "false");
+  if (restoreFocus) {
+    if ($("show-menu").checked && !window.desktop?.nativeMenu) $("view-toggle").focus();
+    else keyboardPane.canvas.focus?.({ preventScroll: true });
+  }
+}
+$("view-toggle").onclick = event => {
+  // Keep the native invoker relationship for light-dismiss, but position it ourselves.
+  event.preventDefault();
+  if (viewMenuOpen) closeViewMenu();
+  else openViewMenu();
+};
+$("view-toggle").addEventListener("pointerenter", () => {
+  if (mainMenus.some(menu => menu.open)) openViewMenu();
+});
+$("view-toggle").addEventListener("keydown", event => {
+  if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+    event.preventDefault();
+    openViewMenu();
+  }
+});
+$("viewmenu").addEventListener("toggle", event => {
+  viewMenuOpen = event.newState === "open";
+  $("view-toggle").setAttribute("aria-expanded", String(viewMenuOpen));
+});
+$("viewmenu").addEventListener("keydown", event => {
+  // Number fields retain native arrow stepping and text-caret navigation.
+  if (event.target?.type === "number") return;
+  if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+  const items = [...$("viewmenu").querySelectorAll("input:not(:disabled)")];
+  const index = items.indexOf(document.activeElement);
+  const next = event.key === "Home" ? 0 : event.key === "End" ? items.length - 1 :
+    (index + (event.key === "ArrowDown" ? 1 : -1) + items.length) % items.length;
+  items[next]?.focus();
+  event.preventDefault();
+});
+function applyViewLayout() {
+  const menuHidden = !$('show-menu').checked && !window.desktop?.nativeMenu;
+  $("main-menu-bar").hidden = menuHidden;
+  $("main-toolbar").hidden = !$("show-toolbar").checked;
+  $("status-bar").hidden = !$("show-status").checked;
+  document.body.classList.toggle("menu-hidden", menuHidden);
+  document.body.classList.toggle("toolbar-hidden", !$("show-toolbar").checked);
+  document.body.classList.toggle("status-hidden", !$("show-status").checked);
+  const hidden = !$("show-options").checked;
+  $("options-panel").hidden = hidden;
+  $("options-resizer").hidden = hidden;
+  $("workspace").classList.toggle("options-hidden", hidden);
+  $("toggle-options").setAttribute("aria-expanded", String(!hidden));
+}
+for (const id of ["show-menu", "show-toolbar", "show-options", "show-status"])
+  $(id).onchange = () => { applyViewLayout(); rebuildColumns(); draw(); };
+for (const id of ["showbackground", "showcolumncaption"])
+  $(id).onchange = () => { rebuildColumns(); draw(); };
+for (const id of ["showmeasureindex", "showmeasureline", "showvertical"])
+  $(id).onchange = draw;
+if (window.desktop?.nativeMenu) $("show-menu").disabled = true;
+applyViewLayout();
+function updateMenuAvailability() {
+  for (const action of ["undo", "redo"])
+    document.querySelectorAll(`[data-action="${action}"]`).forEach(button => { button.disabled = $(action).disabled; });
+  for (const type of ["long", "short", "togglelong", "hidden", "visible", "togglehidden", "value", "mirror"])
+    $("convert-" + type).disabled = !selectedIds.size ||
+      ($("lnstyle").value === "nt" && ["long", "togglelong"].includes(type));
+}
 function closeMainMenus(except = null) {
-  for (const menu of mainMenus) if (menu !== except) menu.open = false;
+  for (const menu of mainMenus) if (menu !== except) {
+    menu.open = false;
+    menu.querySelectorAll("details.submenu").forEach(sub => { sub.open = false; });
+  }
+}
+for (const menu of mainMenus) {
+  menu.addEventListener("toggle", updateMenuAvailability);
+  menu.addEventListener("pointerenter", () => {
+    if (viewMenuOpen || mainMenus.some(other => other !== menu && other.open)) {
+      if (viewMenuOpen) closeViewMenu(false);
+      closeMainMenus(menu); menu.open = true;
+    }
+  });
+  menu.addEventListener("keydown", event => {
+    if (event.key === "Escape") { closeMainMenus(); menu.querySelector("summary").focus(); event.preventDefault(); }
+    if (["ArrowDown", "ArrowUp"].includes(event.key)) {
+      const items = [...menu.querySelectorAll("button, label input, summary")].filter(el => !el.disabled && el.offsetParent !== null);
+      const index = items.indexOf(document.activeElement);
+      items[(index + (event.key === "ArrowDown" ? 1 : -1) + items.length) % items.length]?.focus();
+      event.preventDefault();
+    }
+  });
 }
 // Close synchronously when switching, including in runtimes without details.name.
 for (const menu of mainMenus)
@@ -2448,21 +2812,108 @@ document.querySelectorAll("[data-action]").forEach(
 
 // Settings belong to menu-launched dialogs. The same controls and handlers
 // remain authoritative, so moving them does not fork the editor's state.
-for (const name of ["generalsettings", "displaysettings", "playersettings",
-  "languagesettings", "themesettings", "fileoptions", "inputsettings", "bpmtools", "slashsettings"]) {
+for (const name of ["generalsettings", "displaysettings",
+  "languagesettings", "themesettings", "fileoptions", "inputsettings", "bpmtools"]) {
   $(name).onclick = () => {
     closeMainMenus();
     $(name + "dialog").showModal();
   };
 }
+function syncGeneralControls() {
+  for (const id of generalPreferenceIds) {
+    const node = $(id), value = generalOptions[id];
+    if (typeof value === "boolean") node.checked = value;
+    else {
+      if (["wheelunits", "pageunits"].includes(id) && ![...node.children].some(o => o.value === String(value))) {
+        const option = document.createElement("option"); option.value = String(value);
+        option.textContent = String(value / 192); node.append(option);
+      }
+      node.value = String(value);
+    }
+  }
+  $("middleauto").checked = generalOptions.middlemove === 0;
+  $("middledrag").checked = generalOptions.middlemove === 1;
+  $("autosaveminutes").disabled = !generalOptions.autosave;
+}
+$("generalsettings").onclick = () => {
+  closeMainMenus(); syncGeneralControls();
+  $("general-error").hidden = true;
+  $("generalsettingsdialog").showModal();
+};
+$("autosave").onchange = () => { $("autosaveminutes").disabled = !$("autosave").checked; };
+$("middleauto").onchange = () => { if ($("middleauto").checked) $("middlemove").value = "0"; };
+$("middledrag").onchange = () => { if ($("middledrag").checked) $("middlemove").value = "1"; };
+$("general-ok").onclick = () => {
+  try {
+    const values = validateGeneralSettings(Object.fromEntries(generalPreferenceIds.map(id => [id,
+      typeof generalDefaults[id] === "boolean" ? $(id).checked : $(id).value])));
+    applyPreferences(values); navigation.stop(); persistPreferences();
+    $("generalsettingsdialog").close();
+  } catch (e) { ui.text($("general-error"), e.message); $("general-error").hidden = false; }
+};
+$("general-cancel").onclick = () => { syncGeneralControls(); $("generalsettingsdialog").close(); };
+$("generalsettingsdialog").addEventListener("cancel", syncGeneralControls);
+for (const extension of ["bms", "bme", "bml", "pms", "ibmsc"]) {
+  const button = $("associate-" + extension);
+  button.disabled = !window.desktop?.capabilities?.fileAssociation;
+  if (button.disabled) ui.title(button, "文件关联需要 Windows 桌面版");
+  button.onclick = async () => {
+    try {
+      const result = await window.desktop.associateFile("." + extension);
+      ui.text($("general-error"), result.settingsOpened
+        ? "已注册文件类型，请在 Windows 默认应用中选择 iBMSC"
+        : "已注册文件类型，请手动打开 Windows 默认应用选择 iBMSC");
+      $("general-error").hidden = false;
+    } catch (e) { ui.text($("general-error"), e.message); $("general-error").hidden = false; }
+  };
+}
+let themeEditor;
+let themeEditorInitial;
+function themeEditorError(error) {
+  $("themeedit-error").hidden = !error;
+  ui.text($("themeedit-error"), error?.message || "");
+}
+$("displaysettings").onclick = () => {
+  closeMainMenus();
+  if (!themeEditor) themeEditor = createThemeEditor({ root: $("themeeditor"),
+    preview: $("themeedit-preview"), ui, onError: themeEditorError });
+  const draft = editableTheme(currentTheme);
+  themeEditorInitial = JSON.stringify(draft);
+  themeEditor.load(draft); themeEditorError(null);
+  $("displaysettingsdialog").showModal();
+};
+$("themecustomize").onclick = () => {
+  $("themesettingsdialog").close(); $("displaysettings").click();
+};
+$("themeedit-ok").onclick = () => {
+  try {
+    const draft = themeEditor.read();
+    if (JSON.stringify(draft) !== themeEditorInitial) {
+      currentTheme = customTheme = draft; themeBeforePMS = undefined;
+      persistTheme(); syncThemeChoices(); rebuildColumns(); draw();
+    }
+    $("displaysettingsdialog").close();
+  } catch (e) { themeEditorError(e); }
+};
+$("themeedit-cancel").onclick = () => $("displaysettingsdialog").close();
+function syncNativeMenuState() {
+  if (window.desktop?.updateMenuState)
+    window.desktop.updateMenuState({ nt: $("lnstyle").value === "nt",
+      previewclick: $("previewclick").checked,
+      showfilename: $("showfilename").checked, language: ui.language }).catch(e => status(e.message));
+}
+for (const id of ["previewclick", "showfilename"])
+  $(id).addEventListener("change", syncNativeMenuState);
 function syncInputMode() {
+  errorEvents = new Set(statistics(chart, { nt: $("lnstyle").value === "nt" }).errorEvents);
+  syncNativeMenuState();
   const nt = $("lnstyle").value === "nt";
-  $("toggleln").textContent = `长音符输入方式：${nt ? "NT" : "BMSE"}　F8`;
+  $("toggleln").setAttribute("aria-checked", String(nt));
   $("toggleln").setAttribute("aria-pressed", String(nt));
   document.querySelectorAll('[data-action="toggleln"]').forEach(button => {
     button.textContent = nt ? "NT" : "BMSE";
     button.setAttribute("aria-pressed", String(nt));
-    button.title = `当前 ${nt ? "NT" : "BMSE"}，切换输入方式（F8）`;
+    ui.title(button, "当前 {0}，切换输入方式（F8）", nt ? "NT" : "BMSE");
   });
 }
 $("toggleln").onclick = () => {
@@ -2473,14 +2924,23 @@ $("toggleln").onclick = () => {
   draw();
 };
 $("lnstyle").addEventListener("change", syncInputMode);
-for (const type of ["long", "short", "hidden", "visible", "value", "mirror"]) {
+for (const type of ["long", "short", "togglelong", "hidden", "visible", "togglehidden", "value", "mirror"]) {
   $("convert-" + type).onclick = () => {
     closeMainMenus();
     if (!selectedIds.size) { status("请先选择要转换的音符"); return; }
     if (type === "value") {
       $("conversionvalue").value = $("sample").value;
-      $("conversionerror").textContent = "";
+      ui.text($("conversionerror"), "");
       $("convertvaluedialog").showModal();
+      return;
+    }
+    if (type === "togglelong" || type === "togglehidden") {
+      const captured = captureNotes(chart, selectedIds);
+      mutate(() => {
+        for (const n of captured) chart.rows[n.row].cells[n.index] = "00";
+        for (const n of captured) putCaptured(chart, [n], { copy: true,
+          ...(type === "togglelong" ? { long: !(n.bgmLong || /^[5-8]/.test(n.channel)) } : { hidden: !/^[3478]/.test(n.channel) }) });
+      });
       return;
     }
     $("conversion").value = type;
@@ -2493,8 +2953,8 @@ $("applyconversionvalue").onclick = () => {
     if (!validId(chart, value)) throw Error("编号超出当前谱面进制范围");
     const notes = captureNotes(chart, selectedIds);
     if (mutate(() => putCaptured(chart, notes, { value }))) $("convertvaluedialog").close();
-    else $("conversionerror").textContent = $("status").textContent;
-  } catch (e) { $("conversionerror").textContent = e.message; }
+    else ui.copyText($("conversionerror"), $("status"));
+  } catch (e) { ui.text($("conversionerror"), e.message); }
 };
 syncInputMode();
 
@@ -2513,7 +2973,7 @@ $("wavremove").onclick = () => {
   if (
     usage &&
     !confirm(
-      `选中编号被 ${usage} 个事件引用，移除定义会保留音符但使音源缺失。仍然移除？`,
+      t("选中编号被 {0} 个事件引用，移除定义会保留音符但使音源缺失。仍然移除？", usage),
     )
   )
     return;
@@ -2523,137 +2983,12 @@ $("wavremove").onclick = () => {
 };
 for (const id of ["showfilename", "showgrid"]) $(id).onchange = draw;
 
-let activePlayer = null;
-function renderPlayers(state) {
-  $("playerlist").replaceChildren();
-  for (const p of state.players) {
-    const option = document.createElement("option");
-    option.value = p.id;
-    option.textContent = p.path.split(/[\\/]/).at(-1);
-    $("playerlist").append(option);
-  }
-  activePlayer = state.current;
-  $("playerlist").value = activePlayer || "";
-  const player = state.players.find((p) => p.id === activePlayer);
-  $("playername").textContent = player?.path || "尚未选择";
-  for (const mode of ["begin", "here", "stop"]) {
-    $("player" + mode).value = player?.[mode] || "";
-    $("player" + mode).disabled = !player;
-  }
-  $("playerremove").disabled = !player;
-}
-async function savePlayerTemplates() {
-  if (!activePlayer) return;
-  const templates = Object.fromEntries(
-    ["begin", "here", "stop"].map((mode) => [mode, $("player" + mode).value]),
-  );
-  await window.desktop.updatePlayer(activePlayer, templates);
-}
-async function choosePlayer(add) {
-  if (!window.desktop) {
-    status("外部播放器配置需要桌面版");
-    return;
-  }
-  try {
-    await savePlayerTemplates();
-    const state = await window.desktop.choosePlayer(add ? null : activePlayer);
-    if (state) renderPlayers(state);
-  } catch (e) {
-    status(e.message);
-  }
-}
-$("playerchoose").onclick = () => choosePlayer(false);
-$("playeradd").onclick = () => choosePlayer(true);
-$("playerlist").onchange = async () => {
-  try {
-    const next = $("playerlist").value;
-    await savePlayerTemplates();
-    renderPlayers(await window.desktop.selectPlayer(next));
-  } catch (e) {
-    $("playerlist").value = activePlayer || "";
-    status(e.message);
-  }
-};
-$("playerremove").onclick = async () => {
-  if (!activePlayer) return;
-  try {
-    renderPlayers(await window.desktop.removePlayer(activePlayer));
-  } catch (e) {
-    status(e.message);
-  }
-};
-for (const mode of ["begin", "here", "stop"])
-  $("player" + mode).onchange = () =>
-    savePlayerTemplates().catch((e) => status(e.message));
-if (window.desktop?.players)
-  window.desktop
-    .players()
-    .then(renderPlayers)
-    .catch((e) => status(e.message));
-async function runExternal(mode) {
-  if (!window.desktop) {
-    status("外部播放器需要桌面版");
-    return;
-  }
-  try {
-    const snapshot = confirmedSaveSnapshot("bms");
-    if (!snapshot) return;
-    await savePlayerTemplates();
-    await window.desktop.runPlayer({
-      playerId: activePlayer,
-      mode,
-      text: serializeBMS(snapshot),
-      measure: Number($("measure").value),
-    });
-    status("已发送外部播放器命令");
-  } catch (e) {
-    status(e.message);
-  }
-}
-$("externalbegin").onclick = () => runExternal("begin");
-$("externalhere").onclick = () => runExternal("here");
-$("externalstop").onclick = () => runExternal("stop");
-
-const languageButtons = {
-  new: "Menu/File/New",
-  open: "Menu/File/Open",
-  save: "Menu/File/Save",
-  saveas: "Menu/File/SaveAs",
-  projectexport: "Menu/File/ExportIBMSC",
-  undo: "Menu/Edit/Undo",
-  redo: "Menu/Edit/Redo",
-  cutnotes: "Menu/Edit/Cut",
-  copynotes: "Menu/Edit/Copy",
-  pastenotes: "Menu/Edit/Paste",
-  deletenotes: "Menu/Edit/Delete",
-  selectall: "Menu/Edit/SelectAll",
-  findopen: "Menu/Edit/Find",
-  statistics: "Menu/Edit/Stat",
-  errorcheck: "Menu/Options/ErrorCheck",
-  play: "Menu/Preview/PlayBegin",
-  playhere: "Menu/Preview/PlayHere",
-  stop: "Menu/Preview/PlayStop",
-};
-function applyLanguage(locale) {
-  for (const [id, path] of Object.entries(languageButtons)) {
-    if (!locale.values[path]) continue;
-    $(id).textContent = locale.values[path];
-    $(id).title = locale.values[path];
-    document.querySelectorAll(`[data-action="${id}"]`).forEach((el) => {
-      el.textContent = locale.values[path];
-      el.title = locale.values[path];
-    });
-  }
-  const groups = ["File", "Edit", "Options", "Conversion", "Preview"];
-  document
-    .querySelectorAll("header nav > details > summary")
-    .forEach((el, i) => {
-      const key =
-        groups[i] === "Conversion"
-          ? "Menu/Conversion"
-          : "Menu/" + groups[i] + "/Title";
-      if (locale.values[key]) el.textContent = locale.values[key];
-    });
+function applyLanguage(id, custom = null) {
+  ui.setLanguage(id, custom);
+  if (document.documentElement) document.documentElement.lang = { chs: "zh-CN", jpn: "ja", eng: "en", kor: "ko" }[ui.language];
+  for (const button of [...$("language-menu").children, ...$("languagepopover").children])
+    button.setAttribute("aria-checked", String(!custom && button.dataset.language === ui.language));
+  syncNativeMenuState();
 }
 for (const [id, locale] of Object.entries(locales)) {
   const o = document.createElement("option");
@@ -2661,9 +2996,58 @@ for (const [id, locale] of Object.entries(locales)) {
   o.textContent = locale.name;
   $("language").append(o);
 }
+function populateChoiceMenu(id, choices, choose, selected) {
+  const list = $(id); list.replaceChildren();
+  for (const [value, label] of choices) {
+    const button = document.createElement("button");
+    if (id === "language-menu" || id === "languagepopover") { button.textContent = label; button.dataset.language = value; }
+    else if (!value || value === "custom") ui.text(button, label);
+    else button.textContent = label;
+    button.setAttribute("role", "menuitemradio");
+    button.setAttribute("aria-checked", String(value === selected()));
+    button.onclick = () => {
+      choose(value);
+      if (id === "languagepopover") $("languagepopover").hidePopover();
+      for (const other of list.children) other.setAttribute("aria-checked", String(other === button));
+      closeMainMenus();
+    };
+    list.append(button);
+  }
+}
+for (const menu of ["language-menu", "languagepopover"])
+  populateChoiceMenu(menu, Object.entries(locales).map(([id, locale]) => [id, locale.name]), value => {
+    $("language").value = value; $("language").onchange();
+  }, () => $("language").value || "chs");
+$("language-toggle").onclick = event => {
+  event.preventDefault();
+  closeMainMenus(); closeViewMenu(false);
+  const menu = $("languagepopover"), anchor = $("language-toggle").getBoundingClientRect();
+  if (menu.matches?.(":popover-open")) { menu.hidePopover(); return; }
+  menu.style.left = "0px"; menu.style.top = "0px";
+  menu.showPopover();
+  const bounds = menu.getBoundingClientRect();
+  menu.style.left = Math.max(4, Math.min(anchor.left, window.innerWidth - bounds.width - 4)) + "px";
+  menu.style.top = Math.max(4, Math.min(anchor.bottom, window.innerHeight - bounds.height - 4)) + "px";
+  menu.querySelector('button[aria-checked="true"]')?.focus();
+};
+$("languagepopover").addEventListener("keydown", event => {
+  if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+  const items = [...$("languagepopover").children];
+  const index = items.indexOf(document.activeElement);
+  const next = event.key === "Home" ? 0 : event.key === "End" ? items.length - 1 :
+    (index + (event.key === "ArrowDown" ? 1 : -1) + items.length) % items.length;
+  items[next]?.focus(); event.preventDefault();
+});
+$("languagepopover").addEventListener("toggle", event => {
+  $("language-toggle").setAttribute("aria-expanded", String(event.newState === "open"));
+});
+syncThemeChoices();
 $("language").onchange = () => {
-  const locale = locales[$("language").value];
-  if (locale) applyLanguage(locale);
+  const id = $("language").value;
+  if (!locales[id]) return;
+  applyLanguage(id);
+  try { localStorage.setItem("ibmsc-language", JSON.stringify({ id })); }
+  catch (e) { status(e.message); }
 };
 $("languageimport").onclick = () => $("languagefile").click();
 async function readXMLFile(file) {
@@ -2684,8 +3068,9 @@ $("languagefile").onchange = async () => {
         walk(child, path ? path + "/" + child.tagName : child.tagName);
     }
     walk(doc.documentElement, "");
-    applyLanguage({ values });
-    status("已载入语言文件 " + file.name);
+    applyLanguage(ui.language, values);
+    localStorage.setItem("ibmsc-language", JSON.stringify({ id: ui.language, values }));
+    status("已载入语言文件 {0}", file.name);
   } catch (e) {
     status(e.message);
   } finally {
@@ -2694,26 +3079,35 @@ $("languagefile").onchange = async () => {
 };
 let importedSettings = null;
 function preferenceValues() {
-  return Object.fromEntries(
+  return { ...Object.fromEntries(
     [...Object.keys(preferenceFields), "lnstyle", "beatmode"].map((id) => [
       id,
       preferenceFields[id]?.[2] === "boolean" ? $(id).checked : $(id).value,
     ]),
-  );
+  ), ...generalOptions, bgmcount: bgmMinimum };
 }
 function applyPreferences(values) {
+  if (values.bgmcount !== undefined) bgmMinimum = Number(values.bgmcount);
+  const previousEncoding = generalOptions.defaultencoding;
+  generalOptions = validateGeneralSettings({ ...generalOptions, ...Object.fromEntries(
+    Object.entries(values).filter(([id]) => generalPreferenceIds.includes(id))) });
+  syncGeneralControls();
+  restartAutosave();
+  if (previousEncoding !== generalOptions.defaultencoding) $("encoding").value = generalOptions.defaultencoding;
   for (const [id, value] of Object.entries(values)) {
-    if (!$(id)) continue;
+    if (!$(id) || generalPreferenceIds.includes(id)) continue;
     if (typeof value === "boolean") $(id).checked = value;
     else $(id).value = value;
   }
-  scale = Number($("zoom").value) * 48;
+  editorZoom = Number($("editorzoom").value) / 100;
+  scale = Number($("zoom").value) * 48 * editorZoom;
   horizontalZoom = Number($("widthzoom").value);
   syncSidebarControls();
   $("samples").multiple = $("wavmulti").checked;
   for (const side of ["left", "right"])
     $("pane-" + side).hidden = !$("split-" + side).checked;
   syncInputMode();
+  applyViewLayout();
   refresh();
 }
 $("settingsimport").onclick = () => $("settingsfile").click();
@@ -2730,8 +3124,6 @@ $("settingsfile").onchange = async () => {
         [...el.attributes].map((a) => [a.name, a.value]),
       );
     const values = readPreferenceAttributes(elements);
-    const players = readPlayerSettings(doc);
-    if (players && window.desktop?.importPlayers) renderPlayers(await window.desktop.importPlayers(players));
     applyPreferences(values);
     importedSettings = doc;
     persistPreferences();
@@ -2751,7 +3143,6 @@ $("settingsexport").onclick = async () => {
       "application/xml",
     );
   const doc = updateSettingsDocument(original, preferenceValues());
-  if (window.desktop?.players) writePlayerSettings(doc, await window.desktop.players());
   // XMLSerializer preserves the imported declaration, so explicitly use a UTF-8 declaration.
   const body = new XMLSerializer()
     .serializeToString(doc)
@@ -2773,29 +3164,10 @@ function downloadText(text, name) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 $("themeexport").onclick = () => {
-  if (currentTheme?.sourceXml) {
-    downloadText(currentTheme.sourceXml.replace(/<\?xml[^?]*\?>/i, '<?xml version="1.0" encoding="utf-8"?>'), "Custom.Theme.xml");
-    return;
-  }
-  const cols = currentTheme?.columns || defaultColumns;
-  const unique = [...new Map(cols.map((c) => [Number(c.Index), c])).values()];
-  downloadText(
-    '<?xml version="1.0" encoding="utf-8"?>\n<iBMSC Major="3" Minor="0" Build="5"><Columns>' +
-      unique
-        .map(
-          (c) =>
-            "<Column " +
-            Object.entries(c)
-              .filter(([key]) => /^[A-Za-z][\w.-]*$/.test(key))
-              .map(([key, value]) => key + '="' + xmlEscape(value) + '"')
-              .join(" ") +
-            " />",
-        )
-        .join("") +
-      "</Columns></iBMSC>",
-    "Custom.Theme.xml",
-  );
+  try { downloadText(serializeTheme(editableTheme(currentTheme)), "Custom.Theme.xml"); }
+  catch (e) { status(e.message); }
 };
+
 try {
   const saved = localStorage.getItem("ibmsc-preferences");
   if (saved) {
@@ -2823,7 +3195,7 @@ function persistPreferences() {
         new XMLSerializer().serializeToString(importedSettings),
       );
   } catch (e) {
-    status("设置未能持久保存：" + e.message);
+    status("设置未能持久保存：{0}", e.message);
   }
 }
 try {
@@ -2838,7 +3210,7 @@ try {
   }
 } catch {}
 for (const id of [...Object.keys(preferenceFields), "lnstyle", "beatmode"])
-  $(id).addEventListener("change", persistPreferences);
+  if (!generalPreferenceIds.includes(id)) $(id).addEventListener("change", persistPreferences);
 
 refreshRecentFiles();
 
@@ -2853,11 +3225,9 @@ function setOptionsWidth(value) {
   $("options-resizer").setAttribute("aria-valuenow", String(optionsWidth));
 }
 $("toggle-options").onclick = () => {
-  const hidden = !$("options-panel").hidden;
-  $("options-panel").hidden = hidden;
-  $("options-resizer").hidden = hidden;
-  $("workspace").classList.toggle("options-hidden", hidden);
-  $("toggle-options").setAttribute("aria-expanded", String(!hidden));
+  $("show-options").checked = !$("show-options").checked;
+  $("show-options").onchange();
+  persistPreferences();
 };
 $("options-resizer").onpointerdown = (e) => {
   if (e.button !== 0) return;
@@ -2918,11 +3288,13 @@ function drawWaveOverlay(ctx, top, left, pixels) {
     ? events(chart).find((e) => e.channel === "01")
     : null;
   const origin = overlayClock(firstBGM?.beat ?? position);
-  const center = left + Number($("waveleft").value),
-    amplitude = Number($("wavewidth").value) / 2;
+  const center = left + Number($("waveleft").value) * editorZoom,
+    amplitude = Number($("wavewidth").value) * editorZoom / 2;
   if (![origin, center, amplitude].every(Number.isFinite)) return;
-  ctx.strokeStyle = `rgba(80,160,220,${Number($("waveopacity").value) / 255})`;
-  ctx.lineWidth = 1;
+  ctx.save();
+  ctx.strokeStyle = visualColor(currentTheme, "BGMWav", "rgb(80,160,220)");
+  ctx.globalAlpha = Math.max(0, Math.min(1, Number($("waveopacity").value) / 255));
+  ctx.lineWidth = editorZoom;
   for (
     let channel = 0;
     channel < Math.min(2, overlayBuffer.numberOfChannels);
@@ -2932,7 +3304,7 @@ function drawWaveOverlay(ctx, top, left, pixels) {
     ctx.beginPath();
     for (let step = 0; step <= Math.ceil(pixels * precision); step++) {
       const yy = top + step / precision;
-      const beat = (height - 20 - yy) / scale;
+      const beat = (height - editorInset() - yy) / scale;
       const seconds = overlayClock(beat) - origin;
       const x =
         center +
@@ -2942,6 +3314,7 @@ function drawWaveOverlay(ctx, top, left, pixels) {
     }
     ctx.stroke();
   }
+  ctx.restore();
 }
 $("waveload").onclick = () => $("wavefile").click();
 $("wavefile").onchange = async () => {
@@ -2951,10 +3324,10 @@ $("wavefile").onchange = async () => {
   try {
     if (file.size > 256 * 1024 * 1024) throw Error("波形文件超过 256 MB");
     audio ??= new AudioContext();
-    const buffer = await audio.decodeAudioData(await file.arrayBuffer());
+    const buffer = await decodeAudio(audio, await file.arrayBuffer());
     if (generation !== overlayGeneration) return;
     overlayBuffer = buffer;
-    $("overlayname").textContent = file.name;
+    ui.raw($("overlayname"), file.name);
     draw();
   } catch (e) {
     status(e.message);
@@ -2971,13 +3344,13 @@ $("waveuse").onclick = () => {
   }
   overlayGeneration++;
   overlayBuffer = buffer;
-  $("overlayname").textContent = name;
+  ui.raw($("overlayname"), name);
   draw();
 };
 $("waveclear").onclick = () => {
   overlayGeneration++;
   overlayBuffer = null;
-  $("overlayname").textContent = "未加载叠加波形";
+  ui.text($("overlayname"), "未加载叠加波形");
   draw();
 };
 for (const id of [
@@ -3048,30 +3421,41 @@ if (window.desktop?.nativeMenu) {
     if (document.querySelector("dialog[open]")) return;
     if (action === "openRecent") { openNativeFile(payload); return; }
     if (measurePaste && active === $("measure")) selectPasteMeasure();
-    const allowed = ["portableexport", "about", "new", "open", "save", "saveas", "projectexport", "recover", "undo", "redo", "cutnotes", "copynotes", "pastenotes", "deletenotes", "selectall", "findopen", "statistics", "errorcheck", "themeimport", "toggle-options", "convertnotes", "play", "playhere", "stop",
-      "generalsettings", "displaysettings", "playersettings", "languagesettings", "themesettings", "fileoptions", "inputsettings", "bpmtools", "toggleln", "previewclick", "showfilename",
-      "tool-time", "tool-select", "tool-write", "externalbegin", "externalhere", "externalstop",
+    const allowed = [ "myo2", "importsm", "importibmsc", "checkupdates", "convert-togglelong", "convert-togglehidden", "portableexport", "about", "new", "open", "save", "saveas", "projectexport", "recover", "undo", "redo", "cutnotes", "copynotes", "pastenotes", "deletenotes", "selectall", "findopen", "statistics", "errorcheck", "themeimport", "toggle-options", "convertnotes", "play", "playhere", "stop",
+      "generalsettings", "displaysettings", "languagesettings", "themesettings", "fileoptions", "inputsettings", "bpmtools", "toggleln", "previewclick", "showfilename",
+      "tool-time", "tool-select", "tool-write",
       "convert-long", "convert-short", "convert-hidden", "convert-visible", "convert-value", "convert-mirror", "sourceopen"];
     if (allowed.includes(action)) $(action).click();
   });
 }
 
-$("about").onclick = () => report("关于 iBMSC · 作者与贡献者", creditsText);
+$("about").onclick = () => {
+  report("关于 iBMSC", "");
+  ui.rows($("reporttext"), creditsRows);
+  $("reporttext").hidden = false;
+};
 
-function noteHeight() { return visualNumber(currentTheme, "kHeight", 10); }
+function noteHeight() { return visualNumber(currentTheme, "kHeight", 10) * editorZoom; }
 
 function persistTheme() {
-  try { localStorage.setItem("ibmsc-theme", JSON.stringify(currentTheme)); }
-  catch(e) { status("主题已应用，但设置保存失败：" + e.message); }
+  try {
+    localStorage.setItem("ibmsc-theme", JSON.stringify(currentTheme));
+    localStorage.setItem("ibmsc-custom-theme", JSON.stringify(customTheme));
+  } catch(e) { status("主题已应用，但设置保存失败：{0}", e.message); }
 }
 try {
+  const savedCustom = JSON.parse(localStorage.getItem("ibmsc-custom-theme") || "null");
+  if (savedCustom) customTheme = validateTheme(createThemeDraft(savedCustom));
+} catch(e) { status("已忽略无效的主题设置：{0}", e.message); }
+try {
   const savedTheme = JSON.parse(localStorage.getItem("ibmsc-theme") || "null");
-  if (savedTheme && Array.isArray(savedTheme.columns) && savedTheme.columns.length <= 27 && savedTheme.columns.every(c => Number.isInteger(+c.Index) && +c.Index>=0 && +c.Index<=26 && Number.isFinite(+c.Width) && +c.Width>=0 && +c.Width<=500)) {
-    validateVisual(savedTheme.visual);
-    currentTheme = savedTheme;
+  if (savedTheme) {
+    currentTheme = validateTheme(createThemeDraft(savedTheme));
+    if (themeChoice() === "custom") customTheme = currentTheme;
     rebuildColumns(); draw();
   }
-} catch(e) { status("已忽略无效的主题设置：" + e.message); }
+} catch(e) { status("已忽略无效的主题设置：{0}", e.message); }
+syncThemeChoices();
 $("portableexport").onclick = async () => {
   $("saveformat").value = "ibmscx";
   await $("saveas").onclick();
@@ -3079,8 +3463,19 @@ $("portableexport").onclick = async () => {
 
 function drawNoteLabel(ctx, col, timeY, text, long = false) {
   paintNoteLabel(ctx, col, timeY, text, {
-    height: noteHeight(), font: visualFont(currentTheme, "kFont", "10px monospace"),
-    shiftX: visualNumber(currentTheme, long ? "kLabelHShiftL" : "kLabelHShift", 0),
-    shiftY: visualNumber(currentTheme, "kLabelVShift", 0),
+    height: noteHeight(), zoom: editorZoom, font: editorFont("kFont", "10px monospace"),
+    shiftX: visualNumber(currentTheme, long ? "kLabelHShiftL" : "kLabelHShift", 0) * editorZoom,
+    shiftY: visualNumber(currentTheme, "kLabelVShift", 0) * editorZoom,
   });
 }
+
+// Restore language after all UI controls have been registered.
+try {
+  const saved = JSON.parse(localStorage.getItem("ibmsc-language") || "null");
+  if (saved && locales[saved.id]) {
+    $("language").value = saved.id;
+    applyLanguage(saved.id, saved.values && typeof saved.values === "object" ? saved.values : null);
+  }
+} catch { /* Ignore invalid saved preferences. */ }
+
+window.desktop?.onOpenFile?.(token => openNativeFile(null, null, null, token));

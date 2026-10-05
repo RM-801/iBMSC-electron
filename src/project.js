@@ -1,3 +1,4 @@
+import { expansionLines } from "./expansion.js";
 import { chartBase } from "./identifiers.js";
 import { parseBMS, events, measureStarts } from "./bms.js";
 import {
@@ -220,13 +221,8 @@ export function readProject(bytes) {
         throw Error("未知 iBMSC 数据块：" + block.toString(16));
     }
   }
-  const exp = parseBMS(expansion);
-  c.raw = exp.raw;
-  for (const k of Object.keys(c.resources))
-    Object.assign(c.resources[k], exp.resources[k]);
-  for (const [k, v] of Object.entries(exp.headers))
-    if (k !== "BPM") c.headers[k] = v;
-  c.rows.push(...exp.rows);
+  // Binary projects store the textbox verbatim, not a second BMS document.
+  c.raw = expansion ? expansion.split(/\r\n|\n|\r/) : [];
   const cols = originalColumns({
     bgm: Math.max(15, ...notes.map((n) => n.column - 25)),
   });
@@ -257,7 +253,10 @@ export function readProject(bytes) {
   return c;
 }
 export function writeProject(c) {
-  if (chartBase(c) !== 36) throw Error("原版 .IBMSC 格式仅支持 BASE36；请保存为 BMS，以保留当前 BASE 和编号");
+  if (chartBase(c) !== 36)
+    throw Error(
+      "原版 .IBMSC 格式仅支持 BASE36；请保存为 BMS，以保留当前 BASE 和编号",
+    );
   const w = new Writer(),
     h = c.headers;
   w.i32(0x534d4269);
@@ -298,46 +297,10 @@ export function writeProject(c) {
     w.f64(r * 192);
   }
   w.i32(0x6e707845);
-  const expansion = [...c.raw];
-  for (const [id, v] of Object.entries(c.resources.BMP))
-    expansion.push("#BMP" + id + " " + v);
-  for (const [key, v] of Object.entries(h))
-    if (
-      ![
-        "TITLE",
-        "ARTIST",
-        "GENRE",
-        "BPM",
-        "PLAYER",
-        "RANK",
-        "PLAYLEVEL",
-        "SUBTITLE",
-        "SUBARTIST",
-        "STAGEFILE",
-        "BANNER",
-        "BACKBMP",
-        "DIFFICULTY",
-        "EXRANK",
-        "TOTAL",
-        "COMMENT",
-        "LNOBJ",
-        "LNTYPE",
-      ].includes(key)
-    )
-      expansion.push("#" + key + " " + v);
+  const expansion = expansionLines(c);
+  if (c.headers.BASE) expansion.unshift("#BASE " + c.headers.BASE);
   const all = events(c),
     recognized = all.filter((e) => eventColumn(c, e) >= 0);
-  for (const row of c.rows.filter(
-    (r, i) =>
-      !recognized.some((e) => e.row === i) && r.cells.some((v) => v !== "00"),
-  ))
-    expansion.push(
-      "#" +
-        String(row.measure).padStart(3, "0") +
-        row.channel +
-        ":" +
-        row.cells.join(""),
-    );
   w.str(expansion.join("\r\n"));
   w.i32(0x65746f4e);
   w.i32(recognized.length);
@@ -352,7 +315,8 @@ export function writeProject(c) {
       ),
     );
     w.u8(
-      (e.bgmLong || /^[5-8]/.test(e.channel) ? 1 : 0) | (/^[3478]/.test(e.channel) ? 2 : 0),
+      (e.bgmLong || /^[5-8]/.test(e.channel) ? 1 : 0) |
+        (/^[3478]/.test(e.channel) ? 2 : 0),
     );
     w.f64(0);
   }

@@ -20,3 +20,11 @@ test("desktop saves an actual binary project and preserves Chinese BMS encodings
   const pms = "#PLAYER 1\n#00025:01";
   assert.equal(save.saveBytes({format: "pms", text: pms, encoding: "shift_jis"}).toString(), pms);
 });
+
+
+test("UTF-8 is the default; Shift-JIS cannot silently rename or replace 她", () => {
+  const text = "#TITLE 看上她\r\n#ARTIST 黎明\r\n#00011:01\r\n";
+  assert.equal(save.saveBytes({ format: "bms", text }).toString("utf8"), text);
+  assert.throws(() => save.saveBytes({ format: "bms", text, encoding: "gbk" }), /不支持的保存编码/);
+  assert.throws(() => save.saveBytes({ format: "bms", text, encoding: "shift_jis" }), /Shift-JIS.*她.*UTF-8/);
+});

@@ -1,9 +1,11 @@
+import windowsDialog from "../electron/windows-save-dialog.cjs";
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 if (process.platform !== 'win32') throw Error('Windows packaging requires Windows');
+await windowsDialog.buildWindowsSaveDialog();
 const pkg = JSON.parse(await fs.readFile(path.join(root, 'package.json'), 'utf8'));
 const output = path.resolve(process.argv[2] || path.join(root, 'dist', `iBMSC-${pkg.version}-win-${process.arch}`));
 // Refuse an existing destination rather than deleting any previous package.

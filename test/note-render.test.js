@@ -40,62 +40,136 @@ test("painting retains lane color under selection and keeps strokes above the ti
   assert.equal(ctx.strokeStyle, "red");
 });
 
-test("theme label ink stays inside note borders with oversized fonts and legacy offsets", () => {
-  for (const text of ["01", "120.5", "sound/long-filename-with-descenders.ogg"])
-    for (const width of [10, 30, 42])
-      for (const shiftX of [-8, 0, 2, 100])
-        for (const shiftY of [-2, 0, 100]) {
-          let clip, origin, factor, painted;
-          let saved = 0;
-          const measureText = (value) => ({
-            width: value.length * 8,
-            actualBoundingBoxLeft: 1,
-            actualBoundingBoxRight: value.length * 8,
-            actualBoundingBoxAscent: 11,
-            actualBoundingBoxDescent: 3,
-          });
-          const ctx = {
-            save() {
-              saved++;
-            },
-            restore() {
-              saved--;
-            },
-            beginPath() {},
-            clip() {},
-            rect(...args) {
-              clip = args;
-            },
-            measureText,
-            translate(...args) {
-              origin = args;
-            },
-            scale(x) {
-              factor = x;
-            },
-            fillText(value) {
-              painted = value;
-            },
-          };
-          paintNoteLabel(ctx, { left: 50.25, width }, 200.5, text, {
-            font: "bold 9pt Verdana",
-            shiftX,
-            shiftY,
-          });
-          assert.equal(saved, 0);
-          assert.deepEqual(clip, [53.25, 191.5, width - 6, 8]);
-          if (!painted) continue;
-          const m = measureText(painted);
-          assert.ok(origin[0] - m.actualBoundingBoxLeft * factor >= clip[0]);
-          assert.ok(
-            origin[0] + m.actualBoundingBoxRight * factor <=
-              clip[0] + clip[2] + 1e-9,
-          );
-          assert.ok(origin[1] - m.actualBoundingBoxAscent * factor >= clip[1]);
-          assert.ok(
-            origin[1] + m.actualBoundingBoxDescent * factor <=
-              clip[1] + clip[3] + 1e-9,
-          );
-          assert.ok(painted === text || painted.endsWith("…"));
-        }
+test("theme label ink stays inside scaled note borders with oversized fonts and legacy offsets", () => {
+  for (const zoom of [0.5, 1, 1.5, 3])
+    for (const text of [
+      "01",
+      "120.5",
+      "sound/long-filename-with-descenders.ogg",
+    ])
+      for (const width of [10, 30, 42])
+        for (const shiftX of [-8, 0, 2, 100])
+          for (const shiftY of [-2, 0, 100]) {
+            let clip, origin, factor, painted;
+            let saved = 0;
+            const measureText = (value) => ({
+              width: value.length * 8 * zoom,
+              actualBoundingBoxLeft: zoom,
+              actualBoundingBoxRight: value.length * 8 * zoom,
+              actualBoundingBoxAscent: 11 * zoom,
+              actualBoundingBoxDescent: 3 * zoom,
+            });
+            const ctx = {
+              save() {
+                saved++;
+              },
+              restore() {
+                saved--;
+              },
+              beginPath() {},
+              clip() {},
+              rect(...args) {
+                clip = args;
+              },
+              measureText,
+              translate(...args) {
+                origin = args;
+              },
+              scale(x) {
+                factor = x;
+              },
+              fillText(value) {
+                painted = value;
+              },
+            };
+            paintNoteLabel(
+              ctx,
+              { left: 50.25 * zoom, width: width * zoom },
+              200.5 * zoom,
+              text,
+              {
+                height: 10 * zoom,
+                font: `bold ${9 * zoom}pt Verdana`,
+                shiftX: shiftX * zoom,
+                shiftY: shiftY * zoom,
+                zoom,
+              },
+            );
+            assert.equal(saved, 0);
+            assert.deepEqual(clip, [
+              53.25 * zoom,
+              191.5 * zoom,
+              (width - 6) * zoom,
+              8 * zoom,
+            ]);
+            if (!painted) continue;
+            const m = measureText(painted);
+            assert.ok(
+              origin[0] - m.actualBoundingBoxLeft * factor >= clip[0] - 1e-9,
+            );
+            assert.ok(
+              origin[0] + m.actualBoundingBoxRight * factor <=
+                clip[0] + clip[2] + 1e-9,
+            );
+            assert.ok(
+              origin[1] - m.actualBoundingBoxAscent * factor >= clip[1] - 1e-9,
+            );
+            assert.ok(
+              origin[1] + m.actualBoundingBoxDescent * factor <=
+                clip[1] + clip[3] + 1e-9,
+            );
+            assert.ok(painted === text || painted.endsWith("…"));
+          }
+});
+
+test("editor zoom scales margins, borders and gradients without changing the note time edge", () => {
+  for (const zoom of [0.5, 1.5, 3]) {
+    const fills = [],
+      strokes = [],
+      gradients = [];
+    const ctx = {
+      lineWidth: 7,
+      createLinearGradient(...args) {
+        gradients.push(args);
+        return { addColorStop() {} };
+      },
+      fillRect: (...args) => fills.push(args),
+      strokeRect(...args) {
+        strokes.push({ rect: args, width: this.lineWidth });
+      },
+    };
+    const rect = paintNote(
+      ctx,
+      { id: 5, left: 100 * zoom, width: 40 * zoom },
+      200 * zoom,
+      {
+        height: 10 * zoom,
+        zoom,
+        selected: true,
+      },
+    );
+    assert.deepEqual(rect, {
+      x: 102 * zoom,
+      y: 190 * zoom,
+      width: 36 * zoom,
+      height: 10 * zoom,
+    });
+    assert.deepEqual(fills, [[102 * zoom, 190 * zoom, 36 * zoom, 10 * zoom]]);
+    assert.deepEqual(gradients, [
+      [100 * zoom, 180 * zoom, 140 * zoom, 210 * zoom],
+    ]);
+    assert.equal(strokes.length, 2);
+    for (const {
+      rect: [x, y, width, height],
+      width: lineWidth,
+    } of strokes) {
+      assert.equal(lineWidth, zoom);
+      assert.equal(x - lineWidth / 2, rect.x);
+      assert.equal(y - lineWidth / 2, rect.y);
+      assert.equal(x + width + lineWidth / 2, rect.x + rect.width);
+      assert.equal(y + height + lineWidth / 2, 200 * zoom);
+    }
+    assert.equal(ctx.lineWidth, 7);
+    assert.equal(noteRectangle(0, zoom, 50, 10 * zoom, zoom).width, 0);
+  }
 });

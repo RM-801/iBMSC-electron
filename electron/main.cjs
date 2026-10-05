@@ -1,8 +1,9 @@
-const { app, BrowserWindow, ipcMain, dialog, Menu } = require("electron");
+const { app, BrowserWindow, ipcMain, dialog, Menu, shell } = require("electron");
 const path = require("node:path");
 const fs = require("node:fs/promises");
 const { pathToFileURL } = require("node:url");
 const { readAsset, atomicWrite } = require("./files.cjs");
+const { launchFiles, FileOpenRequests } = require("./launch-files.cjs");
 const entry = path.join(__dirname, "../index.html");
 // Packaged startup verification uses isolated settings and never opens user files.
 const verificationArg = process.argv.find(arg => arg.startsWith("--verify-package="));
@@ -11,9 +12,37 @@ if (verificationReport) app.setPath("userData", path.join(path.dirname(verificat
 let currentPath = null,
   root = null,
   win,
+  initialized = false,
   pendingPath = null,
   pendingToken = null;
 let recent;
+const fileOpenRequests = new FileOpenRequests(token => {
+  if (win && !win.isDestroyed()) win.webContents.send("file:openRequested", token);
+});
+function focusWindow() {
+  if (win && !win.isDestroyed()) {
+    if (win.isMinimized()) win.restore();
+    win.show();
+    win.focus();
+  } else if (initialized) create();
+}
+function requestLaunchFiles(argv, cwd) {
+  for (const filename of launchFiles(argv, { cwd, isPackaged: app.isPackaged, platform: process.platform }))
+    fileOpenRequests.add(filename);
+  focusWindow();
+}
+const ownsInstance = verificationReport || app.requestSingleInstanceLock();
+if (!ownsInstance) app.quit();
+if (ownsInstance && !verificationReport) {
+  requestLaunchFiles(process.argv, process.cwd());
+  app.on("second-instance", (_event, argv, cwd) => requestLaunchFiles(argv, cwd));
+  app.on("open-file", (event, filename) => {
+    event.preventDefault();
+    for (const file of launchFiles([process.execPath, filename], { isPackaged: true, platform: process.platform }))
+      fileOpenRequests.add(file);
+    focusWindow();
+  });
+}
 async function stageFile(filename) {
   const stat = await fs.stat(filename);
   if (!stat.isFile() || stat.size > 32 * 1024 * 1024)
@@ -45,13 +74,13 @@ function checked(handler) {
 }
 ipcMain.handle(
   "file:open",
-  checked(async () => {
+  checked(async (kind) => {
     const choice = await dialog.showOpenDialog(win, {
       properties: ["openFile"],
       filters: [
         {
           name: "BMS / iBMSC",
-          extensions: ["bms", "bme", "bml", "pms", "ibmsc", "ibmscx", "sm"],
+          extensions: kind === "sm" ? ["sm"] : kind === "ibmsc" ? ["ibmsc"] : ["bms", "bme", "bml", "pms", "ibmsc", "ibmscx", "sm"],
         },
       ],
     });
@@ -59,6 +88,14 @@ ipcMain.handle(
     return stageFile(choice.filePaths[0]);
   }),
 );
+ipcMain.handle("app:website", checked(() => shell.openExternal("https://github.com/RM-801/ibmsc-node/releases")));
+ipcMain.handle("app:beep", checked(() => { shell.beep(); return true; }));
+ipcMain.handle("app:associateFile", checked(extension => require("./file-association.cjs").associateFile(extension, {
+  isPackaged: app.isPackaged, openExternal: url => shell.openExternal(url),
+})));
+ipcMain.handle("file:readyForOpen", checked(() => fileOpenRequests.setReady(true)));
+ipcMain.handle("file:openRequested", checked(token => stageFile(fileOpenRequests.resolve(token))));
+ipcMain.handle("file:finishOpenRequest", checked(token => fileOpenRequests.finish(token)));
 ipcMain.handle(
   "file:accept",
   checked(async (token) => {
@@ -99,31 +136,39 @@ ipcMain.handle(
 ipcMain.handle(
   "file:save",
   checked(async (request) => {
-    const bytes = require("./save-data.cjs").saveBytes(request);
+    let encoding = request.encoding || "utf8";
     const project = request.format === "ibmsc", portable = request.format === "ibmscx", pms = request.format === "pms";
     let target = request.saveAs ? null : currentPath;
     const compatible = portable ? /\.ibmscx$/i : project ? /\.ibmsc$/i : pms ? /\.pms$/i : /\.(bms|bme|bml)$/i;
     if (!target || !compatible.test(target)) {
-      const choice = await dialog.showSaveDialog(win, {
-        defaultPath: path.basename(
+      const options = {
+        defaultPath: currentPath && compatible.test(currentPath) ? currentPath : path.join(currentPath ? path.dirname(currentPath) : app.getPath("documents"), path.basename(
           request.name || (portable ? "untitled.ibmscx" : project ? "untitled.ibmsc" : pms ? "untitled.pms" : "untitled.bms"),
-        ),
+        )),
         filters: [
           portable ? { name: "IBMSCX", extensions: ["ibmscx"] } : project
             ? { name: "IBMSC", extensions: ["ibmsc"] }
             : pms ? { name: "PMS", extensions: ["pms"] }
             : { name: "BMS", extensions: ["bms", "bme", "bml"] },
         ],
-      });
+      };
+      const choice = process.platform === "win32" && !project && !portable
+        ? await require("./windows-save-dialog.cjs").showWindowsSaveDialog(win, {
+          defaultPath: options.defaultPath, format: pms ? "pms" : "bms", encoding,
+          title: translateUI("另存为"), encodingLabel: translateUI("保存编码") + " (&E):",
+        }, app.isPackaged)
+        : await dialog.showSaveDialog(win, options);
       if (choice.canceled) return null;
+      encoding = choice.encoding || encoding;
       target = choice.filePath;
       if (!compatible.test(target))
         throw Error("文件扩展名与所选保存格式不一致");
     }
+    const bytes = require("./save-data.cjs").saveBytes({ ...request, encoding });
     await atomicWrite(target, bytes);
     currentPath = target;
     root = path.dirname(target);
-    return { name: path.basename(target), warning: await rememberFile(target) };
+    return { name: path.basename(target), encoding, warning: await rememberFile(target) };
   }),
 );
 async function relativeSoundPaths(filenames) {
@@ -212,93 +257,17 @@ ipcMain.handle(
     }
   }),
 );
-let playerProfiles;
-ipcMain.handle("player:import", checked(async settings => playerProfiles.importSettings(settings)));
-ipcMain.handle(
-  "player:list",
-  checked(async () => playerProfiles.snapshot()),
-);
-ipcMain.handle(
-  "player:update",
-  checked(async (id, templates) => playerProfiles.update(id, templates)),
-);
-ipcMain.handle(
-  "player:select",
-  checked(async (id) => playerProfiles.select(id)),
-);
-ipcMain.handle(
-  "player:remove",
-  checked(async (id) => playerProfiles.remove(id)),
-);
-const previewFiles = new Set();
-ipcMain.handle(
-  "player:choose",
-  checked(async (id = null) => {
-    const choice = await dialog.showOpenDialog(win, {
-      properties: ["openFile"],
-      title: "选择外部 BMS 播放器",
-    });
-    if (choice.canceled) return null;
-    return playerProfiles.choose(choice.filePaths[0], id);
-  }),
-);
-ipcMain.handle(
-  "player:run",
-  checked(async (request) => {
-    const profile = playerProfiles.get(request?.playerId);
-    const chosenPlayer = profile.path;
-    if (!path.isAbsolute(chosenPlayer) || (process.platform !== "win32" && /\.exe$/i.test(chosenPlayer))) throw Error("这是其他平台的播放器路径，请先重新选择本机播放器程序");
-    if (!root) throw Error("请先保存谱面，以确定音源目录");
-    if (
-      !request ||
-      !["begin", "here", "stop"].includes(request.mode) ||
-      typeof request.text !== "string" ||
-      request.text.length > 32 * 1024 * 1024 ||
-      !Number.isInteger(request.measure) ||
-      request.measure < 0 ||
-      request.measure > 999
-    )
-      throw Error("无效预览请求");
-    let filename = currentPath;
-    if (request.mode !== "stop") {
-      filename = path.join(
-        root,
-        ".ibmsc-preview-" + require("node:crypto").randomUUID() + ".bms",
-      );
-      await fs.writeFile(filename, request.text, { flag: "wx" });
-      previewFiles.add(filename);
-    }
-    const args = require("./player.cjs").playerArguments(
-      profile[request.mode],
-      {
-        filename,
-        measure: request.measure,
-        apppath: app.getAppPath(),
-      },
-    );
-    const spawn = require("node:child_process").spawn;
-    const isMacBundle =
-      process.platform === "darwin" && chosenPlayer.endsWith(".app");
-    const child = spawn(
-      isMacBundle ? "/usr/bin/open" : chosenPlayer,
-      isMacBundle ? ["-a", chosenPlayer, "--args", ...args] : args,
-      { shell: false, cwd: root, stdio: "ignore" },
-    );
-    await new Promise((resolve, reject) => {
-      child.once("spawn", resolve);
-      child.once("error", reject);
-    });
-    return true;
-  }),
-);
-app.on("will-quit", () => {
-  for (const file of previewFiles) {
-    try {
-      require("node:fs").unlinkSync(file);
-    } catch {}
+let menuState = {};
+let translateUI = text => text;
+ipcMain.handle("menu:state", checked(async (state) => {
+  if (["chs", "jpn", "eng", "kor"].includes(state?.language)) {
+    const { createTranslator } = await import("../src/localization.js");
+    translateUI = createTranslator(state.language);
   }
-});
-
+  for (const key of ["nt", "previewclick", "showfilename"])
+    if (typeof state?.[key] === "boolean") menuState[key] = state[key];
+  installMenu();
+}));
 function installMenu() {
   if (process.platform !== "darwin") {
     Menu.setApplicationMenu(null);
@@ -308,7 +277,7 @@ function installMenu() {
     (action, payload) => {
       const target = BrowserWindow.getFocusedWindow();
       if (target && !target.isDestroyed()) target.webContents.send("menu:action", action, payload);
-    }, recent?.list() || [],
+    }, recent?.list() || [], menuState, translateUI,
   )));
 }
 ipcMain.handle("menu:edit", checked((action) => {
@@ -318,6 +287,7 @@ ipcMain.handle("menu:edit", checked((action) => {
 }));
 
 function create() {
+  fileOpenRequests.setReady(false);
   installMenu();
   win = new BrowserWindow({
     show: false,
@@ -333,12 +303,14 @@ function create() {
       sandbox: true,
     },
   });
+  win.on("closed", () => fileOpenRequests.setReady(false));
+  win.webContents.on("did-start-loading", () => fileOpenRequests.setReady(false));
   if (!verificationReport) win.once("ready-to-show", () => win.show());
   win.webContents.on("will-prevent-unload", (event) => {
     const choice = dialog.showMessageBoxSync(win, {
-      type: "warning", title: "尚未保存", message: "谱面有未保存的修改。",
-      detail: "返回编辑器保存，或放弃修改并关闭窗口。",
-      buttons: ["返回编辑器", "放弃修改并关闭"], defaultId: 0, cancelId: 0,
+      type: "warning", title: translateUI("尚未保存"), message: translateUI("谱面有未保存的修改。"),
+      detail: translateUI("返回编辑器保存，或放弃修改并关闭窗口。"),
+      buttons: [translateUI("返回编辑器"), translateUI("放弃修改并关闭")], defaultId: 0, cancelId: 0,
     });
     if (choice === 1) event.preventDefault();
   });
@@ -362,6 +334,7 @@ function create() {
   win.loadFile(entry);
 }
 app.whenReady().then(async () => {
+  if (!ownsInstance) return;
   recent = new (require("./recent.cjs").RecentFiles)(
     path.join(app.getPath("userData"), "recent-files.json"),
   );
@@ -370,18 +343,11 @@ app.whenReady().then(async () => {
   } catch (e) {
     console.error(e.message);
   }
-  playerProfiles = new (require("./player-profiles.cjs").PlayerProfiles)(
-    path.join(app.getPath("userData"), "players.json"),
-  );
-  try {
-    await playerProfiles.load();
-  } catch (e) {
-    console.error(e.message);
-  }
+  initialized = true;
   create();
 });
 app.on("activate", () => {
-  if (!BrowserWindow.getAllWindows().length) create();
+  if (ownsInstance && initialized && !BrowserWindow.getAllWindows().length) create();
 });
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();

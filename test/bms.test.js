@@ -9,7 +9,7 @@ import {
   putNote,
   decodeBMS,
 } from "../src/bms.js";
-test("round trip retains duplicate BGM, unknown channels, headers, comments and precise grids", () => {
+test("round trip retains duplicate BGM, extension directives and precise grids", () => {
   const text =
     "#TITLE テスト\n#BPM 120\n#WAVZZ a.wav\n#00001:ZZ00\n#00001:00ZZ\n#00302:0.75\n#003D1:000001\n#00111:000100\n#CUSTOM hello\n; comment";
   const a = parseBMS(text),
@@ -17,8 +17,9 @@ test("round trip retains duplicate BGM, unknown channels, headers, comments and 
   assert.deepEqual(events(a), events(b));
   assert.deepEqual(a.resources, b.resources);
   assert.deepEqual(a.ratios, b.ratios);
-  assert.equal(b.headers.CUSTOM, "hello");
-  assert.ok(serializeBMS(b).includes("; comment"));
+  assert.ok(b.raw.includes("#CUSTOM hello"));
+  assert.ok(b.raw.includes("#003D1:000001"));
+  assert.ok(!serializeBMS(b).includes("; comment"));
 });
 test("fractional placement uses common denominator without moving existing notes", () => {
   const c = parseBMS("#BPM 120\n#00011:000100");

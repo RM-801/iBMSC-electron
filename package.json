@@ -1,6 +1,6 @@
 {
   "name": "ibmsc-node",
-  "version": "0.1.15",
+  "version": "0.1.37",
   "private": true,
   "type": "module",
   "main": "electron/main.cjs",

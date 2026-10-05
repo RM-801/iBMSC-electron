@@ -1,4 +1,9 @@
 import { chartBase, normalizeId, validId } from "./identifiers.js";
+import {
+  isEditorHeader,
+  isEditorChannel,
+  expansionLines,
+} from "./expansion.js";
 // Behavioral reference: iBMSC Form1.vb OpenBMS / SaveBMS (upstream commit in README).
 export const channels = ["16", "11", "12", "13", "14", "15", "18", "19"];
 export function parseBMS(text) {
@@ -30,6 +35,7 @@ export function parseBMS(text) {
   let depth = 0;
   for (const line of text.replace(/^\uFEFF/, "").split(/\r\n|\n|\r/)) {
     const s = line.trim();
+    if (!s.startsWith("#")) continue;
     let m;
     if (/^#(?:RANDOM|SETRANDOM|ENDRANDOM)\b/i.test(s)) {
       chart.raw.push(line);
@@ -55,6 +61,10 @@ export function parseBMS(text) {
         chart.ratios[measure] = n;
         continue;
       }
+      if (!isEditorChannel(channel)) {
+        chart.raw.push(line);
+        continue;
+      }
       if (!/^(?:[0-9a-z]{2})+$/i.test(data))
         throw Error("无效的通道数据：" + s);
       if (channel === "03" && !/^[0-9a-f]+$/i.test(data))
@@ -67,11 +77,12 @@ export function parseBMS(text) {
           : normalizeId(chart, data)
         ).match(/../g),
       });
-    } else if ((m = s.match(/^#(WAV|BMP|BPM|STOP)([0-9a-z]{2})\s+(.+)$/i))) {
+    } else if ((m = s.match(/^#(WAV|BPM|STOP)([0-9a-z]{2})\s+(.+)$/i))) {
       chart.resources[m[1].toUpperCase()][normalizeId(chart, m[2])] = m[3];
     } else if ((m = s.match(/^#([a-z][a-z0-9]*)\s+(.*)$/i))) {
-      if (m[1].toUpperCase() !== "BASE")
-        chart.headers[m[1].toUpperCase()] = m[2];
+      const key = m[1].toUpperCase();
+      if (!isEditorHeader(key)) chart.raw.push(line);
+      else if (key !== "BASE") chart.headers[key] = m[2];
     } else chart.raw.push(line);
   }
   if (depth) throw Error("条件分支未闭合");
@@ -114,17 +125,22 @@ export function flattenBGMLongs(c) {
 export function serializeBMS(c) {
   if (bgmLongEvents(c).length)
     throw Error("BGM 区存有长音符，请先确认保存时仅保留起点");
-  const lines = Object.entries(c.headers).map(([k, v]) => `#${k} ${v}`);
-  for (const [kind, items] of Object.entries(c.resources))
+  const lines = Object.entries(c.headers)
+    .filter(([key]) => isEditorHeader(key))
+    .map(([k, v]) => `#${k} ${v}`);
+  for (const [kind, items] of Object.entries(c.resources).filter(
+    ([kind]) => kind !== "BMP",
+  ))
     for (const [id, v] of Object.entries(items))
       lines.push(`#${kind}${id} ${v}`);
+  lines.push(...expansionLines(c));
   for (const [m, r] of Object.entries(c.ratios))
     lines.push(`#${m.padStart(3, "0")}02:${r}`);
-  for (const row of c.rows)
+  for (const row of c.rows.filter((row) => isEditorChannel(row.channel)))
     lines.push(
       `#${String(row.measure).padStart(3, "0")}${row.channel}:${row.cells.join("")}`,
     );
-  return [...lines, ...c.raw].join("\r\n") + "\r\n";
+  return lines.join("\r\n") + "\r\n";
 }
 export function measureStarts(c, count = 1000) {
   const a = [0];

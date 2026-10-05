@@ -1,3 +1,4 @@
+import { editorMode } from "./chart-mode.js";
 import { rationalFraction } from "./project.js";
 import { events, measureStarts } from "./bms.js";
 
@@ -6,7 +7,7 @@ export function scrollEndBeat(chart) {
   return Math.min(measureStarts(chart).at(-1), last + 2000 / 48);
 }
 export function showsSecondPlayer(chart) {
-  return [2, 3].includes(Number(chart.headers.PLAYER || 1));
+  return editorMode(chart) === "DOUBLE";
 }
 export function viewportGeometry(
   starts,
@@ -55,16 +56,19 @@ export function snappedPosition(starts, beat, grid = 16, snap = true) {
 export function pointerBeat(rendered, rect, bitmapHeight, clientY) {
   const localY =
     ((clientY - rect.top) * bitmapHeight) / (rect.height * rendered.pixelRatio);
-  return (rendered.height - 20 - rendered.top - localY) / rendered.scale;
+  return (rendered.height - (rendered.bottomInset ?? 20) - rendered.top - localY) / rendered.scale;
 }
 
 // Form1.VerticalPositiontoDisplay uses integer panel pixels. All chart marks
 // share this projection; the inverse resolves the same raster pixel to its grid.
 export function displayedBeatY(rendered, beat) {
-  return Math.round(rendered.height - 20 - rendered.top - beat * rendered.scale);
+  return Math.round(rendered.height - (rendered.bottomInset ?? 20) - rendered.top - beat * rendered.scale);
 }
 export function pointerPosition(starts, rendered, rect, bitmapHeight, clientY, grid, snap) {
   // No one-sided pixel bias: above and below each line share half a grid cell.
-  return snappedPosition(starts,
-    pointerBeat(rendered, rect, bitmapHeight, clientY), grid, snap);
+  const beat = pointerBeat(rendered, rect, bitmapHeight, clientY);
+  // Rounding the start line can put its visible pixel up to half a pixel below
+  // beat zero. Keep that pixel clickable without accepting positions below it.
+  const atStart = beat < 0 && beat >= -0.5 / rendered.scale - 1e-9;
+  return snappedPosition(starts, atStart ? 0 : beat, grid, snap);
 }

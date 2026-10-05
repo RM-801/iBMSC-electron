@@ -10,6 +10,23 @@ test("macOS menus dispatch editor commands once and preserve recent paths", () =
     menu.map((x) => x.label),
     ["iBMSC", "文件", "编辑", "选项", "转换", "预览", "窗口"],
   );
+  const edit = menu.find((entry) => entry.label === "编辑").submenu;
+  const options = menu.find((entry) => entry.label === "选项").submenu;
+  const check = edit[edit.findIndex((entry) => entry.label === "统计…") + 1];
+  assert.equal(check.label, "错误检查");
+  assert.notEqual(check.type, "checkbox");
+  assert.equal(
+    options.some((entry) => entry.label === "错误检查"),
+    false,
+  );
+  assert.equal(
+    edit.some((entry) => entry.label === "音符输入设置…"),
+    false,
+  );
+  assert.equal(
+    options.some((entry) => entry.label === "音符输入设置…"),
+    true,
+  );
   const items = menu.flatMap((x) => x.submenu);
   const accelerators = items.map((x) => x.accelerator).filter(Boolean);
   assert.equal(new Set(accelerators).size, accelerators.length);
@@ -21,7 +38,11 @@ test("macOS menus dispatch editor commands once and preserve recent paths", () =
     ["saveas"],
     ["openRecent", filename],
   ]);
-  assert.equal(menuTemplate(() => {})[1].submenu[2].submenu[0].enabled, false);
+  assert.equal(
+    menuTemplate(() => {})[1].submenu.find((x) => x.label === "最近打开")
+      .submenu[0].enabled,
+    false,
+  );
   for (const action of [
     "new",
     "open",
@@ -39,9 +60,14 @@ test("macOS menus dispatch editor commands once and preserve recent paths", () =
     "findopen",
     "statistics",
     "errorcheck",
+    "inputsettings",
+    "myo2",
+    "importsm",
+    "importibmsc",
+    "convert-togglelong",
+    "convert-togglehidden",
     "themesettings",
     "generalsettings",
-    "playersettings",
     "fileoptions",
     "tool-time",
     "toggleln",
@@ -57,4 +83,25 @@ test("macOS menus dispatch editor commands once and preserve recent paths", () =
     items.filter((x) => x.click).forEach((x) => x.click());
     assert.equal(calls.filter((x) => x[0] === action).length, 1, action);
   }
+  assert.equal(
+    calls.some(([action]) =>
+      /playersettings|external|errorhighlight/.test(action),
+    ),
+    false,
+  );
+  calls.length = 0;
+  for (const [accelerator, action] of [
+    ["F5", "play"],
+    ["F6", "playhere"],
+    ["F7", "stop"],
+  ]) {
+    items.find((item) => item.accelerator === accelerator).click();
+    assert.deepEqual(calls.at(-1), [action]);
+  }
+  assert.equal(
+    items.some((item) =>
+      /播放器设置|外部播放器|uBMplay|o2play/i.test(item.label || ""),
+    ),
+    false,
+  );
 });

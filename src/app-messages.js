@@ -1,0 +1,130 @@
+// Runtime feedback originating in app.js. Parameters preserve chart and file data.
+// A causes entry marks only the parameter containing a nested error message.
+export const appMessages = [
+  {
+    source: "已处理 {0} 个音符",
+    jpn: "ノート {0} 個を処理しました",
+    eng: "Processed {0} notes",
+    kor: "노트 {0}개 처리됨",
+  },
+  {
+    source: "已更新节拍",
+    jpn: "拍子を更新しました",
+    eng: "Time signature updated",
+    kor: "박자표 업데이트됨",
+  },
+  {
+    source: "已保存 {0}",
+    jpn: "{0} を保存しました",
+    eng: "Saved {0}",
+    kor: "{0} 저장됨",
+  },
+  {
+    source: "已另存为 {0}",
+    jpn: "{0} として保存しました",
+    eng: "Saved as {0}",
+    kor: "{0}(으)로 저장됨",
+  },
+  {
+    source: "WAV 编号已满",
+    jpn: "空いている WAV 番号がありません",
+    eng: "No WAV indices available",
+    kor: "사용 가능한 WAV 번호가 없습니다",
+  },
+  {
+    source: "BPM / STOP 不可转换为音符轨道",
+    jpn: "BPM / STOP はノートレーンに変換できません",
+    eng: "BPM / STOP cannot be converted to note lanes",
+    kor: "BPM / STOP을 노트 레인으로 변환할 수 없습니다",
+  },
+  {
+    source: "{0} 请选择菜单中的有效值",
+    jpn: "{0}：メニューから有効な値を選択してください",
+    eng: "{0}: Select a valid value from the menu",
+    kor: "{0}: 메뉴에서 유효한 값을 선택하세요",
+  },
+  {
+    source: "主题 XML 无效",
+    jpn: "テーマ XML が無効です",
+    eng: "Invalid theme XML",
+    kor: "테마 XML이 올바르지 않습니다",
+  },
+  {
+    source: "主题列定义无效",
+    jpn: "テーマの列定義が無効です",
+    eng: "Invalid theme column definitions",
+    kor: "테마 열 정의가 올바르지 않습니다",
+  },
+  {
+    source: "编号超出当前谱面进制范围",
+    jpn: "番号が現在の譜面の基数の範囲外です",
+    eng: "Index exceeds the current chart's base",
+    kor: "번호가 현재 채보의 진법 범위를 초과합니다",
+  },
+  {
+    source: "XML 格式无效",
+    jpn: "XML の形式が無効です",
+    eng: "Invalid XML format",
+    kor: "XML 형식이 올바르지 않습니다",
+  },
+  {
+    source: "不是 iBMSC 配置文件",
+    jpn: "iBMSC の設定ファイルではありません",
+    eng: "Not an iBMSC settings file",
+    kor: "iBMSC 설정 파일이 아닙니다",
+  },
+  {
+    source: "波形文件超过 256 MB",
+    jpn: "波形ファイルが 256 MB を超えています",
+    eng: "Waveform file exceeds 256 MB",
+    kor: "파형 파일이 256 MB를 초과합니다",
+  },
+  {
+    source:
+      "目录内音源分配请使用桌面版；网页版可通过加载音源文件关联已有定义。",
+    jpn: "フォルダー内の音源を割り当てるにはデスクトップ版を使用してください。ブラウザー版では音源ファイルを読み込むと既存の定義に関連付けられます。",
+    eng: "Use the desktop app to assign sounds from a folder. In the browser version, load sound files to link them to existing definitions.",
+    kor: "폴더의 음원을 할당하려면 데스크톱 앱을 사용하세요. 웹 버전에서는 음원 파일을 불러와 기존 정의에 연결할 수 있습니다.",
+  },
+  {
+    source: "{0} {1} 调整到64线",
+    jpn: "{0} {1} を64分割に調整",
+    eng: "Adjust {0} {1} to the 64-grid",
+    kor: "{0} {1}을 64분할로 조정",
+  },
+  {
+    source: "音源关联失败：{0}",
+    jpn: "音源の読込に失敗しました：{0}",
+    eng: "Could not load sounds: {0}",
+    kor: "음원 불러오기 실패: {0}",
+    causes: [0],
+  },
+  {
+    source: "自动保存失败：{0}",
+    jpn: "自動保存に失敗しました：{0}",
+    eng: "Autosave failed: {0}",
+    kor: "자동 저장 실패: {0}",
+    causes: [0],
+  },
+  {
+    source: "设置未能持久保存：{0}",
+    jpn: "設定を保存できませんでした：{0}",
+    eng: "Could not persist settings: {0}",
+    kor: "설정 저장 실패: {0}",
+    causes: [0],
+  },
+  {
+    source: "主题已应用，但设置保存失败：{0}",
+    jpn: "テーマは適用されましたが保存に失敗しました：{0}",
+    eng: "Theme applied, but settings could not be saved: {0}",
+    kor: "테마가 적용되었지만 설정 저장 실패: {0}",
+    causes: [0],
+  },
+  {
+    source: "已忽略无效的主题设置：{0}",
+    jpn: "無効なテーマ設定を無視しました：{0}",
+    eng: "Ignored invalid theme settings: {0}",
+    kor: "잘못된 테마 설정 무시됨: {0}",
+    causes: [0],
+  },
+];

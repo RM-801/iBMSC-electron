@@ -1,18 +1,43 @@
+import { bmpDefinitions } from "./expansion.js";
 import { decodeId } from "./identifiers.js";
 import { events, longPairs } from "./bms.js";
 import { eventColumn, numericValue } from "./columns.js";
 export function diagnose(chart) {
+  const bmp = bmpDefinitions(chart);
   const all = events(chart),
     issues = [],
     seen = new Set(),
-    paired = new Set();
-  for (const pair of longPairs(chart).pairs)
+    paired = new Set(),
+    longLanes = new Map();
+  for (const pair of longPairs(chart).pairs) {
     for (const e of pair) paired.add(`${e.row}:${e.index}`);
+    const [start, end] = pair;
+    // LNOBJ connects its nearest prior visible note; that connection is not an
+    // occupied NT Length interval. Only explicit LN flags occupy a whole span.
+    if (!(start.bgmLong || /^[5-8]/.test(start.channel)) || end.beat <= start.beat)
+      continue;
+    const column = eventColumn(chart, start);
+    if (column < 0) continue;
+    if (!longLanes.has(column))
+      longLanes.set(column, { spans: [], next: 0, end: -Infinity });
+    longLanes.get(column).spans.push([start.beat, end.beat]);
+  }
+  for (const lane of longLanes.values()) lane.spans.sort((a, b) => a[0] - b[0]);
   for (const e of all) {
-    const key = `${eventColumn(chart, e)}:${e.beat}`;
-    if (seen.has(key) && eventColumn(chart, e) >= 0)
+    const column = eventColumn(chart, e),
+      key = `${column}:${e.beat}`;
+    if (seen.has(key) && column >= 0)
       issues.push({ event: e, message: "同轨同位置重叠" });
     seen.add(key);
+    const lane = longLanes.get(column);
+    if (lane) {
+      // Sweep sorted spans once per physical lane, including hidden notes and
+      // each independent BGM lane. Endpoints are handled by the overlap check.
+      while (lane.next < lane.spans.length && lane.spans[lane.next][0] < e.beat)
+        lane.end = Math.max(lane.end, lane.spans[lane.next++][1]);
+      if (lane.end > e.beat && !(e.bgmLong || /^[5-8]/.test(e.channel)))
+        issues.push({ event: e, message: "普通音符位于同轨长音符内部" });
+    }
     const kind =
       e.channel === "08"
         ? "BPM"
@@ -25,7 +50,7 @@ export function diagnose(chart) {
               : null;
     if (
       kind &&
-      !chart.resources[kind][e.value] &&
+      !(kind === "BMP" ? bmp : chart.resources[kind])[e.value] &&
       e.value !== chart.headers.LNOBJ
     )
       issues.push({ event: e, message: `缺少 #${kind}${e.value} 定义` });
@@ -105,7 +130,7 @@ export function statistics(chart, { nt = false } = {}) {
     if (row === 2) counts.forEach((value, i) => aLanes[n.column - 4][i] += value);
     if (row === 3) counts.forEach((value, i) => dLanes[n.column - 13][i] += value);
   }
-  return { rows: ["BPM", "STOP", "A1–A8", "D1–D8", "BGM", "总计"],
+  return { errorEvents: notes.filter(n => n.error).map(n => `${n.row}:${n.index}`), rows: ["BPM", "STOP", "A1–A8", "D1–D8", "BGM", "总计"],
     columns: ["短音符", "长音符", "LNOBJ", "隐藏", "错误", "总数"], data,
     showD: [2, 3].includes(Number(chart.headers.PLAYER)) || data[3][5] > 0,
     dLanes: dLanes.map((counts, i) => ({ name: `D${i+1}`, counts })),

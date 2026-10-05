@@ -1,11 +1,11 @@
 import { defaultColumns } from "./default-columns.js";
 export const columnStyle = (col) =>
   col.theme || defaultColumns[Math.min(col.id, 26)];
-export function noteRectangle(left, width, timeY, height = 10) {
+export function noteRectangle(left, width, timeY, height = 10, zoom = 1) {
   return {
-    x: left + 2,
+    x: left + 2 * zoom,
     y: timeY - height,
-    width: Math.max(0, width - 4),
+    width: Math.max(0, width - 4 * zoom),
     height,
   };
 }
@@ -27,14 +27,20 @@ export function paintNoteLabel(
   col,
   timeY,
   text,
-  { height = 10, font = "10px monospace", shiftX = 0, shiftY = 0 } = {},
+  {
+    height = 10,
+    font = "10px monospace",
+    shiftX = 0,
+    shiftY = 0,
+    zoom = 1,
+  } = {},
 ) {
-  const rect = noteRectangle(col.left, col.width, timeY, height);
+  const rect = noteRectangle(col.left, col.width, timeY, height, zoom);
   const inner = {
-    x: rect.x + 1,
-    y: rect.y + 1,
-    width: rect.width - 2,
-    height: rect.height - 2,
+    x: rect.x + zoom,
+    y: rect.y + zoom,
+    width: rect.width - 2 * zoom,
+    height: rect.height - 2 * zoom,
   };
   if (inner.width <= 0 || inner.height <= 0 || !text) return;
   ctx.save();
@@ -98,39 +104,43 @@ export function paintNote(
     height = 10,
     opacity = 0.5,
     selectedColor = "red",
+    zoom = 1,
   } = {},
 ) {
   const style = columnStyle(col),
     color = long ? style.LongNoteColor : style.NoteColor;
-  const rect = noteRectangle(col.left, col.width, timeY, height);
+  const rect = noteRectangle(col.left, col.width, timeY, height, zoom);
   ctx.globalAlpha = hidden ? opacity : 1;
   const gradient = ctx.createLinearGradient(
     col.left,
-    timeY - height - 10,
+    timeY - height - 10 * zoom,
     col.left + col.width,
-    timeY + 10,
+    timeY + 10 * zoom,
   );
   gradient.addColorStop(0, noteColor(color, 50));
   gradient.addColorStop(1, noteColor(color, -25));
   ctx.fillStyle = gradient;
   ctx.fillRect(rect.x, rect.y, rect.width, rect.height);
   // Keep the entire border within the time-anchored rectangle.
+  const previousLineWidth = ctx.lineWidth;
+  ctx.lineWidth = zoom;
   ctx.strokeStyle = noteColor(color, 50);
   ctx.strokeRect(
-    rect.x + 0.5,
-    rect.y + 0.5,
-    Math.max(0, rect.width - 1),
-    Math.max(0, rect.height - 1),
+    rect.x + 0.5 * zoom,
+    rect.y + 0.5 * zoom,
+    Math.max(0, rect.width - zoom),
+    Math.max(0, rect.height - zoom),
   );
   if (selected) {
     ctx.strokeStyle = selectedColor;
     ctx.strokeRect(
-      rect.x + 0.5,
-      rect.y + 0.5,
-      Math.max(0, rect.width - 1),
-      Math.max(0, rect.height - 1),
+      rect.x + 0.5 * zoom,
+      rect.y + 0.5 * zoom,
+      Math.max(0, rect.width - zoom),
+      Math.max(0, rect.height - zoom),
     );
   }
+  ctx.lineWidth = previousLineWidth;
   ctx.fillStyle = noteColor(long ? style.LongTextColor : style.TextColor);
   return rect;
 }
