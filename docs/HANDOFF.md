@@ -1,3 +1,9 @@
+## Beta 2 原生构建验证（2026-10-06）
+
+发布源码为 `879d63b`，版本 0.1.39，标签 `v0.1.39-beta.2`。Apple Silicon/Intel DMG 均通过 300/300 测试、签名与挂载启动检查，根目录只显示 iBMSC.app 和 Applications。构建：https://github.com/RM-801/iBMSC-electron/actions/runs/37343653495 。Linux x64 AppImage/DEB 均通过 300/300 测试、包内容与桌面入口校验、默认沙箱开启的解包启动验证；构建：https://github.com/RM-801/iBMSC-electron/actions/runs/37343657830 。
+
+Windows 安装包内程序与实际便携 EXE 启动自检通过，版本为 0.1.39，页面控制台无错误；本机全量测试 298/300，两项仍为符号链接 EPERM。Beta 1 附件保留，新版本提供六个原生产物与各平台校验和。完整安装/拖拽流程、实际音频和其他 Linux 发行版仍需用户实机验收。
+
 ## Beta 2 打包准备（2026-10-06）
 
 版本更新为 0.1.39。修正 macOS DMG 的可见内容为 iBMSC.app 与 Applications 快捷方式，说明与致谢保留在 app 内；挂载验证检查根目录、快捷方式目标、签名、版权文件和应用启动。新增 Linux x64 的 AppImage/DEB 构建与验证，沿用原图标，保留 Chromium 沙箱；Linux 窗口图标使用原 ICO 内未经修改的 PNG。

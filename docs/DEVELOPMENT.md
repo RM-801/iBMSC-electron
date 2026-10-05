@@ -32,7 +32,7 @@ npm run check
 npm test
 ```
 
-Beta 1 的 Windows 测试为 268/270 通过，两项符号链接测试受 EPERM 权限限制；macOS arm64/x64 均为 270/270 通过。自动测试不替代 [实际验收](ACCEPTANCE.md)。
+Beta 2 的 Windows 测试为 298/300 通过，两项符号链接测试受 EPERM 权限限制；macOS arm64/x64 与 Linux x64 均为 300/300 通过。各平台包内程序启动校验通过；自动测试不替代 [实际验收](ACCEPTANCE.md)。
 
 ## 打包
 
