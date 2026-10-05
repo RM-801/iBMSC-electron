@@ -741,6 +741,23 @@ test("controller initializes and routes document edits, history, columns and sou
     assert.equal(nodes.get("sounderrors").hidden, true);
     const view = nodes.get("viewport"),
       canvas = nodes.get("chart");
+    const nativeSelection = () => ({ cancelable: true, prevented: false,
+      preventDefault() { this.prevented = true; } });
+    const selectEvent = nativeSelection();
+    nodes.get("editorpanes")["event-selectstart"](selectEvent);
+    assert.equal(selectEvent.prevented, true, "chart DOM text selection is suppressed");
+    for (const id of ["chart", "chart-left", "chart-right"]) {
+      const target = nodes.get(id);
+      for (const event of ["touchstart", "touchmove"]) {
+        assert.equal(target["event-options-" + event].passive, false);
+        const touchEvent = nativeSelection();
+        target["event-" + event](touchEvent);
+        assert.equal(touchEvent.prevented, true, id + " blocks native touch selection and callout");
+        target["event-" + event]({ cancelable: false, preventDefault() { assert.fail("non-cancelable events must be left alone"); } });
+      }
+    }
+    for (const id of ["title", "expansion", "source"])
+      assert.equal(nodes.get(id)["event-selectstart"], undefined, "text fields retain native selection");
     view.scrollTop =
       Number.parseFloat(nodes.get("scrollspace").style.height) -
       view.clientHeight;

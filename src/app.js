@@ -1856,8 +1856,14 @@ const touchNavigation = createTouchGestures({
     touchZoomChanged = false;
   },
 });
+// Pointer cancellation/touch-action do not disable native text selection.
+// In Safari, an active touchstart handler also suppresses the hold magnifier.
+const preventChartBrowserGesture = e => { if (e.cancelable) e.preventDefault(); };
+$("editorpanes").addEventListener("selectstart", preventChartBrowserGesture);
 for (const pane of panes) {
   pane.canvas.tabIndex = 0;
+  for (const event of ["touchstart", "touchmove"])
+    pane.canvas.addEventListener(event, preventChartBrowserGesture, { passive: false });
   for (const [event, handler] of [["onpointerdown", "down"], ["onpointermove", "move"],
     ["onpointerup", "up"], ["oncontextmenu", "context"]]) {
     const original = pane.canvas[event];
