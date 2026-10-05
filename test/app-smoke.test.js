@@ -691,6 +691,90 @@ test("controller initializes and routes document edits, history, columns and sou
     AudioContext.prototype.decodeAudioData = nativeDecode;
 
     delete window.desktop;
+    // Folder selection associates existing definitions by path, without importing
+    // unrelated files or decoding the same file again for case variants.
+    assert.equal(nodes.get("audiofolder").hidden, false);
+    let folderPickerOpened = 0, filesPickerOpened = 0;
+    nodes.get("soundfolder").onclick = () => folderPickerOpened++;
+    nodes.get("sounds").onclick = () => filesPickerOpened++;
+    nodes.get("audiofolder").click();
+    assert.equal(filesPickerOpened, 1, "older browsers retain the file picker fallback");
+    assert.match(nodes.get("status").textContent, /不支持选择文件夹/);
+    nodes.get("soundfolder").webkitdirectory = true;
+    nodes.get("audiofolder").click();
+    assert.equal(folderPickerOpened, 1);
+    nodes.get("source").value = "#TITLE Folder\n#BPM 120\n#WAV01 sound\\kick.wav\n#WAV02 pad/kick.wav\n#WAV03 sound/snare.wav\n#WAV04 SOUND/KICK.WAV\n#WAV05 missing.wav";
+    nodes.get("sourceapply").click();
+    const readFiles = [];
+    const soundFile = (path, value) => ({
+      name: path.split("/").at(-1), webkitRelativePath: path,
+      arrayBuffer: async () => { readFiles.push(path); return new Uint8Array([value]).buffer; },
+    });
+    const folderFiles = [soundFile("Song/sound/kick.wav", 11), soundFile("Song/pad/kick.wav", 22),
+      soundFile("Song/sound/snare.ogg", 33), soundFile("Song/background.png", 44),
+      soundFile("Song/unused.wav", 55)];
+    nodes.get("sourceopen").click();
+    const sourceBeforeFolder = nodes.get("source").value;
+    nodes.get("sourcecancel").click();
+    const historyBeforeFolder = [nodes.get("undo").disabled, nodes.get("redo").disabled, document.title];
+    nodes.get("soundfolder").files = folderFiles;
+    nodes.get("soundfolder").value = "chosen";
+    await nodes.get("soundfolder").onchange();
+    assert.equal(nodes.get("soundfolder").value, "", "same folder can be selected again");
+    assert.deepEqual(readFiles, folderFiles.slice(0, 3).map(file => file.webkitRelativePath));
+    assert.equal(nodes.get("soundstatus").textContent, "音源已关联：4 个；未能加载：1 个");
+    assert.match(nodes.get("sounderrorlist").textContent, /missing.wav：未找到音源文件/);
+    nodes.get("sourceopen").click();
+    assert.equal(nodes.get("source").value, sourceBeforeFolder);
+    nodes.get("sourcecancel").click();
+    assert.deepEqual([nodes.get("undo").disabled, nodes.get("redo").disabled, document.title], historyBeforeFolder);
+    const auditionByte = async id => {
+      nodes.get("sample").value = id;
+      nodes.get("samples").onclick();
+      await new Promise(resolve => setImmediate(resolve));
+      return new Uint8Array(auditionVoices.at(-1).buffer.bytes)[0];
+    };
+    assert.equal(await auditionByte("01"), 11);
+    assert.equal(await auditionByte("02"), 22, "same basename in another folder retains its own audio");
+    assert.equal(await auditionByte("03"), 33, "WAV reference may resolve to OGG audio");
+    nodes.get("soundfolder").files = [];
+    const reportBeforeCancel = nodes.get("soundstatus").textContent;
+    await nodes.get("soundfolder").onchange();
+    assert.equal(nodes.get("soundstatus").textContent, reportBeforeCancel);
+
+    // A later selection or a new chart must not receive an older pending decode.
+    let finishFolderRead;
+    const slowFile = { ...folderFiles[0], arrayBuffer: () => new Promise(resolve => { finishFolderRead = resolve; }) };
+    nodes.get("soundfolder").files = [slowFile];
+    const oldFolderLoad = nodes.get("soundfolder").onchange();
+    await new Promise(resolve => setImmediate(resolve));
+    nodes.get("soundfolder").files = [soundFile("Song/sound/kick.wav", 77)];
+    await nodes.get("soundfolder").onchange();
+    finishFolderRead(new Uint8Array([66]).buffer);
+    await oldFolderLoad;
+    assert.equal(await auditionByte("01"), 77);
+    assert.equal(nodes.get("samples").children[1].textContent.includes("✓"), false,
+      "missing sounds from a replacement folder do not retain stale buffers");
+    nodes.get("soundfolder").files = [slowFile];
+    const obsoleteFolderLoad = nodes.get("soundfolder").onchange();
+    await new Promise(resolve => setImmediate(resolve));
+    await nodes.get("new").click();
+    finishFolderRead(new Uint8Array([88]).buffer);
+    await obsoleteFolderLoad;
+    assert.equal(nodes.get("soundstatus").textContent, "");
+    assert.ok(nodes.get("samples").children.every(option => !option.textContent.includes("✓")));
+    nodes.get("source").value = "#BPM 120\n#WAV01 sound/kick.wav";
+    nodes.get("sourceapply").click();
+    nodes.get("soundfolder").files = [slowFile];
+    const replacedFolderLoad = nodes.get("soundfolder").onchange();
+    await new Promise(resolve => setImmediate(resolve));
+    nodes.get("sounds").files = [soundFile("kick.wav", 99)];
+    await nodes.get("sounds").onchange();
+    finishFolderRead(new Uint8Array([88]).buffer);
+    await replacedFolderLoad;
+    assert.match(nodes.get("soundstatus").textContent, /^已加载/);
+    assert.equal(nodes.get("sounderrors").hidden, true);
+    assert.equal(await auditionByte("01"), 99);
     const droppedFile = {
       name: "dropped.bms",
       arrayBuffer: async () =>
@@ -701,6 +785,7 @@ test("controller initializes and routes document edits, history, columns and sou
       preventDefault() {},
     });
     assert.equal(nodes.get("project").textContent, "Dropped");
+    assert.equal(nodes.get("soundstatus").textContent, "", "a newly opened chart clears the previous sound report");
     assert.equal(nodes.get("count").textContent, "1");
     await handlers.drop({
       dataTransfer: { files: [droppedFile, { name: "second.bms" }] },

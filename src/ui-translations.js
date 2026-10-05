@@ -145,6 +145,11 @@ WAV 编号列表|WAV 番号一覧|WAV index list|WAV 번호 목록
 加粗线|補助線|Major grid|굵은 격자선
 加载波形|波形を読み込む|Load waveform|파형 불러오기
 加载音源文件|音源ファイルを読み込む|Load sound files|음원 파일 불러오기
+选择音源文件夹|音源フォルダーを選択|Choose sound folder|음원 폴더 선택
+无效音源路径|音源のパスが無効です|Invalid sound path|잘못된 음원 경로
+未找到音源文件|音源ファイルが見つかりません|Sound file not found|음원 파일을 찾을 수 없음
+音源路径存在歧义|音源の候補が複数あります|Multiple sound files match this path|이 경로와 일치하는 음원 파일이 여러 개 있음
+此浏览器不支持选择文件夹，请选择音源文件。|このブラウザーはフォルダー選択に対応していません。音源ファイルを選択してください。|This browser does not support folder selection. Please select the sound files.|이 브라우저는 폴더 선택을 지원하지 않습니다. 음원 파일을 선택하세요.
 单击播放 Key 音|クリックでキー音を再生|Preview key sound on click|클릭 시 키음 재생
 变拍方式|拍子変更方式|Measure resize mode|박자 변경 방식
 变拍时的音符处理|拍子変更時のノート処理|Notes when resizing measures|박자 변경 시 노트 처리

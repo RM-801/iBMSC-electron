@@ -28,7 +28,7 @@ Node.js is not required. Download new versions manually to update. Linux package
 
 The web version starts in your browser language, falls back to English for unsupported languages, and remembers your manual choice. System-language detection for the desktop app is coming in the next release.
 
-1. Extract your chart files before opening them. Keep audio files in the chart folder and its subfolders; the editor resolves them from the chart's WAV definitions.
+1. Extract your chart files before opening them. Keep audio files in the chart folder and its subfolders. On the web, use **WAV → Sound loading status → Choose sound folder** to select that folder and load the chart's keysounds.
 2. Use **F2 / F3** for the select / write tools, **F5 / F7** to play / stop, and **Ctrl + mouse wheel** to zoom the editor.
 3. Charts are saved as **UTF-8** by default. Choose **Shift-JIS** for older players such as LR2. PMS charts automatically use the Pomu nine-key skin and default to the `.pms` extension.
 

@@ -10,6 +10,7 @@ import { constantBPM, checkMyO2Grid, adjustMyO2Grid } from "./myo2.js";
 import { bmpDefinitions, migrateExpansion, setBMPDefinition } from "./expansion.js";
 import { KeyPreview } from "./key-preview.js";
 import { decodeAudio } from "./audio-decode.js";
+import { resolveBrowserSoundFiles } from "./browser-sounds.js";
 import { playbackPlan, voiceStart } from "./playback-plan.js";
 import { positionStatus, statusNumber } from "./position-status.js";
 import { defaultColumns } from "./default-columns.js";
@@ -1409,9 +1410,8 @@ $("new").onclick = async () => {
   history.reset(chart);
   dirty = false;
   buffers.clear();
+  clearSoundReport();
   wavSelection = new Set(["01"]);
-  ui.text($("soundstatus"), "");
-  $("sounderrors").hidden = true;
   selected = null;
   selectedIds.clear();
   refresh();
@@ -1499,6 +1499,7 @@ async function openNativeFile(recentPath, droppedFile, kind, requestedToken) {
     applyFileDefaults(file.name);
     history.reset(chart);
     buffers.clear();
+    clearSoundReport();
     wavSelection = new Set(["01"]);
     selected = null;
     selectedIds.clear();
@@ -1555,6 +1556,7 @@ async function openBrowserFile(f) {
     applyFileDefaults(f.name);
     history.reset(chart);
     buffers.clear();
+    clearSoundReport();
     wavSelection = new Set(["01"]);
     selected = null;
     selectedIds.clear();
@@ -1669,16 +1671,44 @@ async function preview(name) {
 }
 $("audiofiles").onclick = () =>
   window.desktop ? loadProjectSounds() : $("sounds").click();
+$("audiofolder").hidden = Boolean(window.desktop);
+$("audiofolder").onclick = () => {
+  if (!("webkitdirectory" in $("soundfolder"))) {
+    status("此浏览器不支持选择文件夹，请选择音源文件。");
+    $("sounds").click();
+    return;
+  }
+  $("soundfolder").click();
+};
+$("soundfolder").onchange = async () => {
+  const files = [...$("soundfolder").files];
+  if (!files.length) return;
+  try {
+    await loadProjectSounds(files);
+  } finally {
+    $("soundfolder").value = "";
+  }
+};
 if (window.desktop) {
   ui.text($("audiofiles"), "重新关联音源");
 }
 async function loadBrowserSounds(files) {
+  if (!files.length) return;
+  const targetChart = chart,
+    generation = ++soundLoadGeneration;
+  const active = () =>
+    chart === targetChart && generation === soundLoadGeneration;
+  clearSoundReport();
   try {
     await context();
     let failed = 0;
     for (const f of files) {
+      if (!active()) return;
       try {
-        const decoded = await decodeAudio(audio, await f.arrayBuffer());
+        const data = await f.arrayBuffer();
+        if (!active()) return;
+        const decoded = await decodeAudio(audio, data);
+        if (!active()) return;
         buffers.set(f.name.toLowerCase(), decoded);
         for (const name of Object.values(chart.resources.WAV)) {
           if (
@@ -1702,10 +1732,12 @@ async function loadBrowserSounds(files) {
         failed++;
       }
     }
+    if (!active()) return;
     refresh();
+    ui.text($("soundstatus"), "已加载 {0} 个音源；失败 {1} 个", buffers.size, failed);
     status("已加载 {0} 个音源；失败 {1} 个", buffers.size, failed);
   } catch (e) {
-    status(e.message);
+    if (active()) status(e.message);
   } finally {
     $("sounds").value = "";
   }
@@ -2358,29 +2390,54 @@ $("convertnotes").onclick = () => {
 };
 
 let soundLoadGeneration = 0;
-async function loadProjectSounds() {
-  if (!window.desktop) return;
+function clearSoundReport() {
+  ui.text($("soundstatus"), "");
+  $("sounderrors").hidden = true;
+  ui.raw($("sounderrorlist"), "");
+}
+async function loadProjectSounds(folderFiles = null) {
+  if (!window.desktop && !folderFiles) return;
   const targetChart = chart,
     generation = ++soundLoadGeneration;
   const active = () =>
     chart === targetChart && generation === soundLoadGeneration;
   const names = [...new Set(Object.values(targetChart.resources.WAV))];
+  const folderMatches = folderFiles
+    ? new Map(
+        resolveBrowserSoundFiles(folderFiles, names).map(match => [match.name, match]),
+      )
+    : null;
+  const decodedFiles = new Map();
   let loaded = 0;
   const errors = [];
   $("sounderrors").hidden = true;
   ui.raw($("sounderrorlist"), "");
   ui.text($("soundstatus"), "正在自动关联音源…");
   try {
-    if (names.length) audio ??= new AudioContext();
+    if (names.length) {
+      if (folderFiles) await context();
+      else audio ??= new AudioContext();
+    }
     for (const name of names) {
       if (!active()) return;
       const key = name.toLowerCase().replaceAll("\\", "/");
       try {
-        const data = await window.desktop.asset(name);
-        if (!active()) return;
-        const decoded = await decodeAudio(audio,
-          new Uint8Array(data).buffer,
-        );
+        let decoded;
+        if (folderMatches) {
+          const { file, error } = folderMatches.get(name);
+          if (!file) throw Error(error);
+          decoded = decodedFiles.get(file);
+          if (!decoded) {
+            const data = await file.arrayBuffer();
+            if (!active()) return;
+            decoded = await decodeAudio(audio, data);
+            decodedFiles.set(file, decoded);
+          }
+        } else {
+          const data = await window.desktop.asset(name);
+          if (!active()) return;
+          decoded = await decodeAudio(audio, new Uint8Array(data).buffer);
+        }
         if (!active()) return;
         buffers.set(key, decoded);
         loaded++;
@@ -2404,6 +2461,9 @@ async function loadProjectSounds() {
       ui.text($("soundstatus"), "音源关联失败：{0}", e.message);
       ui.copyText($("status"), $("soundstatus"));
     }
+  } finally {
+    if (generation === soundLoadGeneration && chart !== targetChart)
+      clearSoundReport();
   }
 }
 $("saveas").onclick = async () => {

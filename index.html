@@ -701,6 +701,13 @@
               <summary>音源加载状态</summary>
               <div class="opbody">
                 <button
+                  id="audiofolder"
+                  data-icon="PlayerBrowse"
+                  title="选择音源文件夹"
+                >
+                  选择音源文件夹
+                </button>
+                <button
                   id="audiofiles"
                   data-icon="PlayerBrowse"
                   title="加载音源文件"
@@ -1358,7 +1365,7 @@
       accept="audio/*,.ogg,.wav"
       multiple
       hidden
-    />
+    /><input id="soundfolder" type="file" webkitdirectory multiple hidden />
     <script type="module" src="src/app.js"></script>
     <dialog id="noteeditdialog" aria-labelledby="noteedittitle">
       <h2 id="noteedittitle">修改音符数值</h2>
