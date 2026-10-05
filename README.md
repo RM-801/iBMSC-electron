@@ -79,12 +79,13 @@ Beta 1 发布前共运行 270 项自动测试，268 项通过；两项 Windows �
 
 ## 从源码运行
 
-需要 **Node.js 22 或更高版本**及 npm。
+需要 **Node.js 22.12 或更高版本**及 npm。
 
 ```sh
 git clone https://github.com/RM-801/ibmsc-node.git
 cd ibmsc-node
 npm ci
+npx --no-install install-electron
 ```
 
 启动桌面版：
