@@ -290,6 +290,7 @@ function create() {
   fileOpenRequests.setReady(false);
   installMenu();
   win = new BrowserWindow({
+    ...(process.platform === "win32" ? { icon: path.join(__dirname, "../assets/app/ibmsc.ico") } : {}),
     show: false,
     width: 1440,
     height: 960,

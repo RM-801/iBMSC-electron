@@ -1,3 +1,5 @@
+> **首个公开测试版：Beta 1（0.1.38）**。Windows 安装版和便携版见 [GitHub Releases](https://github.com/RM-801/ibmsc-node/releases)。功能与已知限制见 [发布说明](docs/releases/v0.1.38-beta.1.md)。尚未提供在线试用站。
+
 # iBMSC
 
 跨平台谱面编辑器，移植与维护：SeaRay。当前测试版本：**0.1.37**。
@@ -272,3 +274,7 @@ BGM 暂存长音符：编辑器内保留长条，可拖回演奏轨。保存 BMS
 - 原版播放器 XML 和桌面播放器列表联动；保留未知 XML 属性。导入外平台路径不会运行程序，需重新选择本机播放器。
 - 未保存关闭窗口提供明确的返回/放弃选项。
 - 108 项测试通过，12.8 万音符数据基准见 docs/BENCHMARK.json。真实音频、视觉及跨平台验收未完成，不能称全部 TODO 已关闭。
+
+### Windows 安装版
+
+运行 `npm run package:win:installer` 生成 `dist/installer-<version>/iBMSC-<version>-setup-x64.exe`。安装向导允许选择目录，并创建桌面及开始菜单快捷方式；按当前用户安装，无需管理员权限。卸载保留用户设置。安装版目前尚未接入自动更新。

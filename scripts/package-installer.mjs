@@ -11,7 +11,7 @@ const pkg = JSON.parse(
   await fs.readFile(path.join(root, "package.json"), "utf8"),
 );
 const output = path.resolve(
-  process.argv[2] || path.join(root, "dist", `portable-${pkg.version}`),
+  process.argv[2] || path.join(root, "dist", `installer-${pkg.version}`),
 );
 // Never overwrite a released artifact or delete an existing directory.
 await fs.mkdir(path.dirname(output), { recursive: true });
@@ -20,7 +20,7 @@ await fs.mkdir(output);
 await windowsDialog.buildWindowsSaveDialog();
 const artifacts = await build({
   projectDir: root,
-  targets: Platform.WINDOWS.createTarget("portable", Arch.x64),
+  targets: Platform.WINDOWS.createTarget("nsis", Arch.x64),
   publish: "never",
   config: {
     appId: "org.ibmsc.node",
@@ -43,11 +43,17 @@ const artifacts = await build({
       "THIRD_PARTY_NOTICES.md",
     ],
     win: { icon: path.join(root, "assets/app/ibmsc.ico"), signExecutable: false },
-    portable: {
-      artifactName: "iBMSC-${version}-portable-${arch}.${ext}",
-      requestExecutionLevel: "user",
-      // Each launch extracts to its own temporary directory, then cleans it up.
-      unpackDirName: false,
+    nsis: {
+      artifactName: "iBMSC-${version}-setup-${arch}.${ext}",
+      oneClick: false,
+      perMachine: false,
+      allowElevation: false,
+      allowToChangeInstallationDirectory: true,
+      createDesktopShortcut: true,
+      createStartMenuShortcut: true,
+      shortcutName: "iBMSC",
+      runAfterFinish: false,
+      deleteAppDataOnUninstall: false,
     },
   },
 });
