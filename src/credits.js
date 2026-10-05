@@ -9,6 +9,6 @@ export const creditsRows = [
   { source: "原作贡献者" },
   { source: "{0}", values: [contributors] },
   { source: "" },
-  { source: "项目：{0}", values: ["https://github.com/RM-801/ibmsc-node"] },
+  { source: "项目：{0}", values: ["https://github.com/RM-801/iBMSC-electron"] },
 ];
 export const creditsText = creditsRows.map(row => row.source.replace(/\{(\d+)\}/g, (_, i) => row.values?.[i] ?? "")).join("\n");

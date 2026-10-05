@@ -1519,7 +1519,7 @@ $("importsm").onclick = () => openNativeFile(null, null, "sm");
 $("importibmsc").onclick = () => openNativeFile(null, null, "ibmsc");
 $("quit").onclick = () => window.close();
 $("checkupdates").onclick = () => window.desktop?.website ? window.desktop.website() :
-    window.open("https://github.com/RM-801/ibmsc-node/releases", "_blank", "noopener");
+    window.open("https://github.com/RM-801/iBMSC-electron/releases", "_blank", "noopener");
 async function refreshRecentFiles() {
   const container = $("recentfiles");
   container.hidden = !window.desktop?.recent;

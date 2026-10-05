@@ -1,6 +1,10 @@
+## 仓库与使用入口更新（2026-10-05）
+
+仓库改名为 RM-801/iBMSC-electron。README 精简为四语言用户指南，源码运行及构建说明移至 DEVELOPMENT.md；项目、更新检查和发布说明链接同步改为新地址。网页版通过 GitHub Pages 工作流部署，来源为 main 的静态编辑器文件。
+
 ## macOS Beta 1 已补充发布（2026-10-05）
 
-Apple Silicon / Intel DMG 已加入 v0.1.38-beta.1。两种架构分别通过 270/270 测试、签名完整性、镜像校验及挂载启动检查。构建记录：https://github.com/RM-801/ibmsc-node/actions/runs/37277838791 。使用临时签名，未公证；真实音频及完整交互仍待验收。下方 macOS“尚未构建/重验”的旧记录由本次结果更新。README 已重写为用户入口，包含各平台下载、使用、限制及源码构建说明。
+Apple Silicon / Intel DMG 已加入 v0.1.38-beta.1。两种架构分别通过 270/270 测试、签名完整性、镜像校验及挂载启动检查。构建记录：https://github.com/RM-801/iBMSC-electron/actions/runs/37277838791 。使用临时签名，未公证；真实音频及完整交互仍待验收。下方 macOS“尚未构建/重验”的旧记录由本次结果更新。README 已重写为用户入口，包含各平台下载、使用、限制及源码构建说明。
 
 ## 首个公开 Beta 发布记录
 

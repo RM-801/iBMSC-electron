@@ -88,7 +88,7 @@ ipcMain.handle(
     return stageFile(choice.filePaths[0]);
   }),
 );
-ipcMain.handle("app:website", checked(() => shell.openExternal("https://github.com/RM-801/ibmsc-node/releases")));
+ipcMain.handle("app:website", checked(() => shell.openExternal("https://github.com/RM-801/iBMSC-electron/releases")));
 ipcMain.handle("app:beep", checked(() => { shell.beep(); return true; }));
 ipcMain.handle("app:associateFile", checked(extension => require("./file-association.cjs").associateFile(extension, {
   isPackaged: app.isPackaged, openExternal: url => shell.openExternal(url),
