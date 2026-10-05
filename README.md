@@ -10,14 +10,18 @@ iBMSC 是面向 BMS / PMS 制谱的谱面编辑器。本项目基于 **iBMSC 3.0
 
 ## 下载
 
-| Windows x64 | 说明 |
+| 版本 | 说明 |
 | --- | --- |
-| [安装版](https://github.com/RM-801/ibmsc-node/releases/download/v0.1.38-beta.1/iBMSC-0.1.38-setup-x64.exe) | 可选择安装目录，创建桌面和开始菜单快捷方式。 |
-| [便携版](https://github.com/RM-801/ibmsc-node/releases/download/v0.1.38-beta.1/iBMSC-0.1.38-portable-x64.exe) | 无需安装，双击 EXE 即可运行。 |
+| [Windows x64 安装版](https://github.com/RM-801/ibmsc-node/releases/download/v0.1.38-beta.1/iBMSC-0.1.38-setup-x64.exe) | 可选择安装目录，创建桌面和开始菜单快捷方式。 |
+| [Windows x64 便携版](https://github.com/RM-801/ibmsc-node/releases/download/v0.1.38-beta.1/iBMSC-0.1.38-portable-x64.exe) | 无需安装，双击 EXE 即可运行。 |
+| [macOS Apple Silicon](https://github.com/RM-801/ibmsc-node/releases/download/v0.1.38-beta.1/iBMSC-0.1.38-mac-arm64.dmg) | 适用于 M 系列芯片的 Mac。 |
+| [macOS Intel](https://github.com/RM-801/ibmsc-node/releases/download/v0.1.38-beta.1/iBMSC-0.1.38-mac-x64.dmg) | 适用于 Intel 芯片的 Mac。 |
 
-两种版本均自带运行环境，**无需安装 Node.js**。更新目前需要下载新版本，尚未接入自动更新。
+桌面版均自带运行环境，**无需安装 Node.js**。更新目前需要下载新版本，尚未接入自动更新。
 
-[发布说明](docs/releases/v0.1.38-beta.1.md) · [SHA-256 校验文件](https://github.com/RM-801/ibmsc-node/releases/download/v0.1.38-beta.1/SHA256SUMS.txt) · [全部版本](https://github.com/RM-801/ibmsc-node/releases)
+[发布说明](docs/releases/v0.1.38-beta.1.md) · [Windows SHA-256 校验文件](https://github.com/RM-801/ibmsc-node/releases/download/v0.1.38-beta.1/SHA256SUMS.txt) · [全部版本](https://github.com/RM-801/ibmsc-node/releases)
+
+macOS 安装：打开 DMG，将 iBMSC.app 拖入 Applications。Mac 包采用临时签名，尚未进行 Developer ID 签名或 Apple 公证。
 
 当前为 Beta 测试版，Windows 包尚未签名。建议先使用谱面副本，确认保存、重新打开及目标播放器播放符合预期。
 
@@ -61,7 +65,7 @@ iBMSC 是面向 BMS / PMS 制谱的谱面编辑器。本项目基于 **iBMSC 3.0
 | --- | --- |
 | Windows x64 | 已发布安装版和便携版，通过打包启动检查。 |
 | 浏览器 | 可从源码本地运行；已检查基本界面、菜单、缩放和语言切换。在线试用站尚未部署。 |
-| macOS | 已有打包脚本和早期构建记录；当前 Beta 尚未完成验收，暂不提供成品。 |
+| macOS Apple Silicon / Intel | 已发布 DMG，通过 macOS CI 测试、镜像校验及挂载启动检查；真实音频与完整制谱流程待验收。 |
 | Linux | 尚未完成打包与平台验收。 |
 
 ## 已知限制
@@ -73,7 +77,7 @@ iBMSC 是面向 BMS / PMS 制谱的谱面编辑器。本项目基于 **iBMSC 3.0
 - 原版 `.ibmsc` 工程不能保存独立 PMS 模式；需要保留该模式时请使用 `.pms` 或 `.ibmscx`。早期文本工程及原版撤销历史尚未恢复。
 - 音源格式兼容、长曲性能、文件关联和实际播放器互操作仍需更多样本验收。
 
-Beta 1 发布前共运行 270 项自动测试，268 项通过；两项 Windows 符号链接测试因 `EPERM` 未完成。自动测试与启动检查不代表所有功能均已验收。
+Beta 1 发布前共运行 270 项自动测试，268 项通过；两项 Windows 符号链接测试因 `EPERM` 未完成。macOS 两种架构均为 270/270 通过，并完成 DMG 挂载启动检查。自动测试与启动检查不代表所有功能均已验收。
 
 详细状态见 [进展与原版差异](docs/STATUS.md) 和 [验收清单](docs/ACCEPTANCE.md)。
 
@@ -117,6 +121,12 @@ npm run package:win:portable
 ```
 
 产物位于 `dist/`。构建脚本不会覆盖已有输出目录；重复构建时可通过 `-- <新输出目录>` 指定目录。
+
+在 macOS 上构建 DMG：
+
+```sh
+npm run package:mac
+```
 
 ## 反馈与参与
 

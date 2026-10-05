@@ -1,3 +1,7 @@
+## macOS Beta 1 已补充发布（2026-10-05）
+
+Apple Silicon / Intel DMG 已加入 v0.1.38-beta.1。两种架构分别通过 270/270 测试、签名完整性、镜像校验及挂载启动检查。构建记录：https://github.com/RM-801/ibmsc-node/actions/runs/37277838791 。使用临时签名，未公证；真实音频及完整交互仍待验收。下方 macOS“尚未构建/重验”的旧记录由本次结果更新。README 已重写为用户入口，包含各平台下载、使用、限制及源码构建说明。
+
 ## 首个公开 Beta 发布记录
 
 版本：0.1.38；Git 标签：v0.1.38-beta.1；发布形式：GitHub Pre-release，Windows x64 安装版与便携版。[发布说明](releases/v0.1.38-beta.1.md)。本文下方标明旧版本的“不创建 Release”及“仅本机测试”属于历史状态。
