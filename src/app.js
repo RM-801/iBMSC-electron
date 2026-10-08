@@ -2,6 +2,7 @@ import { encodeBMS } from "./bms-encoding.js";
 import { generalDefaults, generalPreferenceIds, validateGeneralSettings } from "./general-settings.js";
 import { createChartNavigation } from "./chart-navigation.js";
 import { createTouchGestures } from "./touch-gestures.js";
+import { createDragPreview } from "./drag-preview.js";
 import { prepareBMSExport } from "./bms-export.js";
 import { createFindCriteria, applyFindOperation } from "./find-replace.js";
 import { createFindReplace } from "./find-replace-ui.js";
@@ -550,10 +551,13 @@ function drawPane(pane) {
     }
   }
   drawWaveOverlay(ctx, top, left, h);
+  const preview = drag?.preview;
+  const displayedErrors = preview?.errorEvents || errorEvents;
   for (const [a, b] of renderCache.visiblePairs(
     (height - editorInset() - top - h) / scale,
     (height - editorInset() - top) / scale,
   )) {
+    if ([a, b].some(note => preview?.hiddenIds.has(eventId(note)))) continue;
     const col = columns[laneOf(a)];
     if (!col || col.width <= 0) continue;
     ctx.fillStyle = noteColor(columnStyle(col).LongNoteColor);
@@ -570,6 +574,7 @@ function drawPane(pane) {
     (height - editorInset() - top - h - noteHeight() - 2) / scale,
     (height - editorInset() - top + noteHeight() + 2) / scale,
   )) {
+    if (preview?.hiddenIds.has(eventId(e))) continue;
     const col = columns[laneOf(e)],
       yy = y(e.beat);
     if (!col || col.width <= 0 || yy < top - noteHeight() || yy > top + h + noteHeight()) continue;
@@ -582,7 +587,7 @@ function drawPane(pane) {
         selectedIds.has(eventId(e)) ||
         (selected?.row === e.row && selected?.index === e.index),
     });
-    if (errorEvents.has(eventId(e))) {
+    if (displayedErrors.has(eventId(e))) {
       ctx.strokeStyle = visualColor(currentTheme, "kError", "red");
       ctx.strokeRect(col.left + 2 * editorZoom, yy - noteHeight(), Math.max(0, col.width - 4 * editorZoom), noteHeight());
     }
@@ -597,7 +602,7 @@ function drawPane(pane) {
   }
   if (drag?.preview) {
     ctx.save();
-    ctx.globalAlpha = 0.65;
+    ctx.globalAlpha = 1;
     for (const [a, b] of drag.preview.pairs) {
       const col = columns.find((c) => c.id === a.column);
       if (!col || col.width <= 0) continue;
@@ -620,6 +625,10 @@ function drawPane(pane) {
         hidden: /^[3478]/.test(note.channel),
         selected: true,
       });
+      if (displayedErrors.has(eventId(note))) {
+        ctx.strokeStyle = visualColor(currentTheme, "kError", "red");
+        ctx.strokeRect(col.left + 2 * editorZoom, yy - noteHeight(), Math.max(0, col.width - 4 * editorZoom), noteHeight());
+      }
       ctx.fillStyle = "#fff";
       drawNoteLabel(ctx, col, yy, String(note.number ?? note.value), note.bgmLong || /^[5678]/.test(note.channel));
     }
@@ -776,6 +785,7 @@ function hit(p) {
     .visible(p.beat - (noteHeight() + 1) / scale, p.beat + (noteHeight() + 1) / scale)
     .find(
       (e) =>
+        !drag?.preview?.hiddenIds.has(eventId(e)) &&
         laneOf(e) === p.lane &&
         p.beat >= e.beat &&
         (p.beat - e.beat) * scale <= noteHeight(),
@@ -783,7 +793,8 @@ function hit(p) {
   if (endpoint) return endpoint;
   if ($("lnstyle").value === "nt" || columns[p.lane].channel === "01") {
     const pair = renderCache.pairs.find(
-      ([a, b]) => laneOf(a) === p.lane && p.beat >= a.beat && p.beat <= b.beat,
+      ([a, b]) => ![a, b].some(note => drag?.preview?.hiddenIds.has(eventId(note))) &&
+        laneOf(a) === p.lane && p.beat >= a.beat && p.beat <= b.beat,
     );
     return pair?.[0];
   }
@@ -878,7 +889,11 @@ function snappedBeat(p) {
 }
 function updateDragPreview(e) {
   if (!drag || drag.box) return;
+  if (!drag.preview && Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 5) return;
   const p = location(e);
+  const position = p && [p.lane, snappedBeat(p), $("verticaloff").checked, $("lnstyle").value].join(":");
+  if (position && position === drag.previewPosition) return;
+  drag.previewPosition = position;
   drag.preview = null;
   if (!p) return;
   try {
@@ -919,10 +934,16 @@ function updateDragPreview(e) {
       }));
       const map = new Map(notes.map((n) => [eventId(n), n]));
       const pairs = longPairs(chart)
-        .pairs.filter((pair) => pair.every((n) => map.has(eventId(n))))
-        .map((pair) => pair.map((n) => map.get(eventId(n))));
+        .pairs.filter((pair) => drag.copy
+          ? pair.every(n => map.has(eventId(n)))
+          : pair.some(n => map.has(eventId(n))))
+        .map((pair) => pair.map((n) => map.get(eventId(n)) || { ...n, column: renderCache.column(n) }));
       drag.preview = { notes, pairs };
     }
+    drag.sourceNotes ??= renderCache.all.map(note => ({ ...note, column: renderCache.column(note) }));
+    drag.preview = createDragPreview(chart, drag.sourceNotes, drag.notes || [], drag.preview, {
+      copy: drag.copy && !drag.resize, nt: $("lnstyle").value === "nt",
+    });
   } catch {
     drag.preview = null;
   }

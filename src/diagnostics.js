@@ -60,11 +60,11 @@ export function diagnose(chart) {
   return issues;
 }
 // Form1.vb 6570–6608 and UpdatePairing 3585–3690.
-export function statistics(chart, { nt = false } = {}) {
+export function statistics(chart, { nt = false, notes: sourceNotes = events(chart) } = {}) {
   const lnobj = chart.headers.LNOBJ ? decodeId(chart, chart.headers.LNOBJ) : -1;
-  let notes = events(chart).map(e => ({ ...e, column: eventColumn(chart, e),
+  let notes = sourceNotes.map(e => ({ ...e, column: e.column ?? eventColumn(chart, e),
     long: e.bgmLong || /^[5-8]/.test(e.channel), hidden: /^[3478]/.test(e.channel),
-    lnobj: (eventColumn(chart, e) <= 2 ? Number(numericValue(chart, e)) : decodeId(chart, e.value)) === lnobj,
+    lnobj: ((e.column ?? eventColumn(chart, e)) <= 2 ? Number(numericValue(chart, e)) : decodeId(chart, e.value)) === lnobj,
     length: 0, error: false, pair: null,
   })).filter(n => n.column >= 0);
   // ConvertBMSE2NT: pair long flags in the physical column, stopping at LNOBJ.

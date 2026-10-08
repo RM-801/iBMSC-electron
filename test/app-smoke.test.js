@@ -862,6 +862,47 @@ test("controller initializes and routes document edits, history, columns and sou
     const touch = { ...pointer, pointerType: "touch", preventDefault() {} };
     const bottom = () => Number.parseFloat(nodes.get("scrollspace").style.height) - view.clientHeight;
     const resetTouchView = () => { view.scrollLeft = 0; view.scrollTop = bottom(); view.onscroll(); };
+    // Moving notes replace their old drawing before release, including a group
+    // moved onto one of its own former positions. Cancellation restores it all.
+    nodes.get("source").value = "#BPM 120\n#00011:01020000";
+    nodes.get("sourceapply").click();
+    nodes.get("tool-select").click();
+    nodes.get("selectall").click();
+    resetTouchView();
+    const noteLabels = calls => calls.flatMap((call, index) => call.canvas === "chart" && call.op === "fillText" && ["01", "02"].includes(call.args[0])
+      ? [{ ...call, position: calls.slice(0, index).findLast(previous => previous.canvas === "chart" && previous.op === "translate").args }]
+      : []);
+    paintCalls = [];
+    canvas.onpointerdown(pointer);
+    const oldLabels = noteLabels(paintCalls);
+    assert.equal(oldLabels.length, 2);
+    const movedPointer = { ...pointer, clientY: pointer.clientY - 48 };
+    paintCalls = [];
+    canvas.onpointermove(movedPointer);
+    const movingLabels = noteLabels(paintCalls);
+    assert.equal(movingLabels.length, 2, "no original-position ghosts while dragging");
+    for (const label of movingLabels)
+      assert.equal(label.position[1], oldLabels.find(old => old.args[0] === label.args[0]).position[1] - 48);
+    nodes.get("sourceopen").click();
+    assert.deepEqual(events(parseBMS(nodes.get("source").value)).map(note => note.beat), [0, 1], "document remains atomic until release");
+    nodes.get("sourcecancel").click();
+    paintCalls = [];
+    canvas.onpointercancel();
+    assert.deepEqual(noteLabels(paintCalls).map(call => call.position), oldLabels.map(call => call.position));
+    paintCalls = null;
+    canvas.onpointerdown(pointer);
+    canvas.onpointermove(movedPointer);
+    canvas.onpointerup(movedPointer);
+    nodes.get("sourceopen").click();
+    assert.deepEqual(events(parseBMS(nodes.get("source").value)).map(note => [note.value, note.beat]), [["01", 1], ["02", 2]]);
+    nodes.get("sourcecancel").click();
+    nodes.get("undo").click();
+    nodes.get("sourceopen").click();
+    assert.deepEqual(events(parseBMS(nodes.get("source").value)).map(note => note.beat), [0, 1], "one undo restores the whole drag");
+    nodes.get("sourcecancel").click();
+    await nodes.get("new").click();
+    nodes.get("tool-write").click();
+    resetTouchView();
     const initialTitle = document.title;
     canvas.onpointerdown(touch);
     canvas.onpointermove({ ...touch, clientY: 480 });
