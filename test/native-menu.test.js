@@ -140,3 +140,12 @@ test("native view state accepts booleans only and preserves unchecked controls",
   assert.equal(Object.hasOwn(state, "unknown"), false);
   assert.deepEqual(nativeViewState(null), nativeViewState());
 });
+
+test("native Edit keeps the Windows More editing tools submenu and labels", () => {
+  const calls = [];
+  const edit = menuTemplate((...args) => calls.push(args)).find(item => item.label === "编辑").submenu;
+  const more = edit.find(item => item.label === "更多编辑工具");
+  assert.deepEqual(more.submenu.map(item => item.label), ["BPM 计算…", "编辑 BMS 文本"]);
+  more.submenu.forEach(item => item.click());
+  assert.deepEqual(calls, [["bpmtools"], ["sourceopen"]]);
+});

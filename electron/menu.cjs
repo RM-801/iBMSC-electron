@@ -97,8 +97,13 @@ function menuTemplate(
         item("写入工具", "tool-write", "F3"),
         sep,
         item("MyO2 工具箱", "myo2"),
-        item("BPM 计算…", "bpmtools"),
-        item("完整 BMS 文本…", "sourceopen"),
+        {
+          label: translate("更多编辑工具"),
+          submenu: [
+            item("BPM 计算…", "bpmtools"),
+            item("编辑 BMS 文本", "sourceopen"),
+          ],
+        },
       ],
     },
     {
