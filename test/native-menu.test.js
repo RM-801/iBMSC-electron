@@ -1,14 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
-const { menuTemplate } = createRequire(import.meta.url)("../electron/menu.cjs");
+const { menuTemplate, nativeViewState } = createRequire(import.meta.url)("../electron/menu.cjs");
 test("macOS menus dispatch editor commands once and preserve recent paths", () => {
   const calls = [];
   const filename = "/scores/中文 song.bms";
   const menu = menuTemplate((...args) => calls.push(args), [filename]);
   assert.deepEqual(
     menu.map((x) => x.label),
-    ["iBMSC", "文件", "编辑", "选项", "转换", "预览", "窗口"],
+    ["iBMSC", "文件", "编辑", "视图", "选项", "转换", "预览", "窗口"],
   );
   const edit = menu.find((entry) => entry.label === "编辑").submenu;
   const options = menu.find((entry) => entry.label === "选项").submenu;
@@ -27,7 +27,8 @@ test("macOS menus dispatch editor commands once and preserve recent paths", () =
     options.some((entry) => entry.label === "音符输入设置…"),
     true,
   );
-  const items = menu.flatMap((x) => x.submenu);
+  const visit = entries => entries.flatMap(entry => [entry, ...visit(entry.submenu || [])]);
+  const items = visit(menu);
   const accelerators = items.map((x) => x.accelerator).filter(Boolean);
   assert.equal(new Set(accelerators).size, accelerators.length);
   items.find((x) => x.label === "粘贴").click();
@@ -104,4 +105,38 @@ test("macOS menus dispatch editor commands once and preserve recent paths", () =
     ),
     false,
   );
+});
+
+test("native View exposes every renderer checkbox except the system menu bar", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
+  const viewHtml = html.slice(html.indexOf('id="viewmenu"'), html.indexOf('id="languagepopover"'));
+  const inputs = [...viewHtml.matchAll(/<input\b[^>]*>/g)]
+    .map(([tag]) => ({ id: tag.match(/id="([^"]+)"/)?.[1], checkbox: /type="checkbox"/.test(tag), checked: /\bchecked\b/.test(tag) }))
+    .filter(input => input.checkbox && input.id !== "show-menu");
+  const visit = entries => entries.flatMap(entry => [entry, ...visit(entry.submenu || [])]);
+  for (const invert of [false, true]) {
+    const view = Object.fromEntries(inputs.map(input => [input.id, invert ? !input.checked : input.checked]));
+    const calls = [];
+    const items = visit(menuTemplate((...args) => calls.push(args), [], { view }).find(item => item.label === "视图").submenu);
+    const checks = items.filter(item => item.type === "checkbox");
+    assert.equal(checks.length, inputs.length);
+    for (const item of checks) {
+      item.click();
+      const id = calls.at(-1)[0].slice(5);
+      assert.equal(item.checked, view[id], id);
+    }
+    assert.deepEqual(calls.map(([action]) => action).sort(), inputs.map(({ id }) => "view:" + id).sort());
+    items.find(item => item.accelerator === "F10").click();
+    assert.deepEqual(calls.at(-1), ["view-toggle"]);
+  }
+});
+
+test("native view state accepts booleans only and preserves unchecked controls", () => {
+  const state = nativeViewState({ "show-toolbar": false, "show-options": "false", showbga: true, unknown: true });
+  assert.equal(state["show-toolbar"], false);
+  assert.equal(state["show-options"], true);
+  assert.equal(state.showbga, true);
+  assert.equal(Object.hasOwn(state, "unknown"), false);
+  assert.deepEqual(nativeViewState(null), nativeViewState());
 });

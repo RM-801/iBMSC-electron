@@ -271,6 +271,8 @@ ipcMain.handle("menu:state", checked(async (state) => {
   }
   for (const key of ["nt", "previewclick", "showfilename"])
     if (typeof state?.[key] === "boolean") menuState[key] = state[key];
+  if (state?.view && typeof state.view === "object")
+    menuState.view = require("./menu.cjs").nativeViewState(state.view);
   installMenu();
 }));
 function installMenu() {
