@@ -1,3 +1,16 @@
+// Same controls and ordering as the renderer's view menu.
+const viewGroups = [
+  [["show-toolbar","工具栏",true], ["show-options","操作面板",true], ["show-status","状态栏",true]],
+  [["split-left","左分屏",false], ["split-right","右分屏",false]],
+  [["showgrid","主网格",true], ["showsubgrid","副网格",true], ["showbackground","轨道背景",true], ["showmeasureindex","小节编号",true], ["showmeasureline","小节线",true], ["showvertical","垂直线",true], ["showcolumncaption","列标题",true]],
+  [["showbpm","BPM",true], ["showstop","STOP",true], ["showbga","BGA / Layer / Poor",false]],
+  [["scrolllock-left","左",true], ["scrolllock","中",true], ["scrolllock-right","右",true]]
+];
+function nativeViewState(input = {}) {
+  return Object.fromEntries(viewGroups.flat().map(([id, , fallback]) =>
+    [id, typeof input?.[id] === "boolean" ? input[id] : fallback]));
+}
+
 // Commands share the renderer's existing handlers and unsaved-change checks.
 function menuTemplate(
   send,
@@ -16,6 +29,9 @@ function menuTemplate(
     checked,
   });
   const sep = { type: "separator" };
+  const view = nativeViewState(state.view);
+  const viewChecks = group => group.map(([id, label]) =>
+    check(label, "view:" + id, view[id]));
   return [
     {
       label: translate("iBMSC"),
@@ -81,8 +97,26 @@ function menuTemplate(
         item("写入工具", "tool-write", "F3"),
         sep,
         item("MyO2 工具箱", "myo2"),
-        item("BPM 计算…", "bpmtools"),
-        item("完整 BMS 文本…", "sourceopen"),
+        {
+          label: translate("更多编辑工具"),
+          submenu: [
+            item("BPM 计算…", "bpmtools"),
+            item("编辑 BMS 文本", "sourceopen"),
+          ],
+        },
+      ],
+    },
+    {
+      label: translate("视图"),
+      submenu: [
+        ...viewChecks(viewGroups[0]), sep,
+        ...viewChecks(viewGroups[1]), sep,
+        ...viewChecks(viewGroups[2]), sep,
+        ...viewChecks(viewGroups[3]), sep,
+        { label: translate("分屏滚动同步"), submenu: viewChecks(viewGroups[4]) },
+        sep,
+        // The existing panel also exposes numeric zoom and BGM column controls.
+        item("显示 / 隐藏…", "view-toggle", "F10"),
       ],
     },
     {
@@ -138,4 +172,4 @@ function menuTemplate(
     },
   ];
 }
-module.exports = { menuTemplate };
+module.exports = { menuTemplate, nativeViewState };

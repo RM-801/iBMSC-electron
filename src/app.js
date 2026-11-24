@@ -1966,6 +1966,7 @@ window.addEventListener("keydown", (e) => {
   if (e.defaultPrevented || e.target.isContentEditable) return;
   if (document.querySelector("dialog[open]")) return;
   if (e.key === "F10" && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
+    if (window.desktop?.nativeMenu) return; // Native accelerator owns F10 on macOS.
     e.preventDefault();
     if (viewMenuOpen) closeViewMenu();
     else openViewMenu();
@@ -3067,10 +3068,14 @@ function syncNativeMenuState() {
   if (window.desktop?.updateMenuState)
     window.desktop.updateMenuState({ nt: $("lnstyle").value === "nt",
       previewclick: $("previewclick").checked,
-      showfilename: $("showfilename").checked, language: ui.language }).catch(e => status(e.message));
+      showfilename: $("showfilename").checked, language: ui.language,
+      view: Object.fromEntries([...$("viewmenu").querySelectorAll('input[type="checkbox"]')]
+        .map(input => [input.id, input.checked])) }).catch(e => status(e.message));
 }
 for (const id of ["previewclick", "showfilename"])
   $(id).addEventListener("change", syncNativeMenuState);
+for (const input of $("viewmenu").querySelectorAll('input[type="checkbox"]'))
+  input.addEventListener("change", syncNativeMenuState);
 function syncInputMode() {
   errorEvents = new Set(statistics(chart, { nt: $("lnstyle").value === "nt" }).errorEvents);
   syncNativeMenuState();
@@ -3392,9 +3397,7 @@ function setOptionsWidth(value) {
   $("options-resizer").setAttribute("aria-valuenow", String(optionsWidth));
 }
 $("toggle-options").onclick = () => {
-  $("show-options").checked = !$("show-options").checked;
-  $("show-options").onchange();
-  persistPreferences();
+  $("show-options").click();
 };
 $("options-resizer").onpointerdown = (e) => {
   if (e.button !== 0) return;
@@ -3587,9 +3590,15 @@ if (window.desktop?.nativeMenu) {
     // Do not edit the chart behind an open dialog.
     if (document.querySelector("dialog[open]")) return;
     if (action === "openRecent") { openNativeFile(payload); return; }
+    if (typeof action === "string" && action.startsWith("view:")) {
+      const input = [...$("viewmenu").querySelectorAll('input[type="checkbox"]')]
+        .find(input => input.id === action.slice(5) && !input.disabled);
+      input?.click(); // Existing change handlers redraw, persist and sync once.
+      return;
+    }
     if (measurePaste && active === $("measure")) selectPasteMeasure();
     const allowed = [ "myo2", "importsm", "importibmsc", "checkupdates", "convert-togglelong", "convert-togglehidden", "portableexport", "about", "new", "open", "save", "saveas", "projectexport", "recover", "undo", "redo", "cutnotes", "copynotes", "pastenotes", "deletenotes", "selectall", "findopen", "statistics", "errorcheck", "themeimport", "toggle-options", "convertnotes", "play", "playhere", "stop",
-      "generalsettings", "displaysettings", "languagesettings", "themesettings", "fileoptions", "inputsettings", "bpmtools", "toggleln", "previewclick", "showfilename",
+      "generalsettings", "displaysettings", "languagesettings", "themesettings", "fileoptions", "inputsettings", "bpmtools", "toggleln", "previewclick", "showfilename", "view-toggle",
       "tool-time", "tool-select", "tool-write",
       "convert-long", "convert-short", "convert-hidden", "convert-visible", "convert-value", "convert-mirror", "sourceopen"];
     if (allowed.includes(action)) $(action).click();
